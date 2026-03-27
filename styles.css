@@ -132,7 +132,8 @@ section.visible {
 .hero-content p {
     font-size: 1.25rem;
     color: var(--text-muted);
-    max-width: 500px;
+    max-width: 700px;
+    line-height: 1.8;
     margin-bottom: 40px;
 }
 
@@ -183,7 +184,7 @@ section.visible {
 /* --- Venue Cards --- */
 .venue-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 30px;
     margin-top: 40px;
 }
