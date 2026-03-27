@@ -98,15 +98,18 @@ section.visible {
     align-items: center;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(to bottom, rgba(15, 11, 10, 0.65), #0f0b0a),
+    /* 調整遮罩透明度 (從 0.65 降至 0.4)，並加入混合模式讓底圖更有質感 */
+    background: linear-gradient(to bottom, rgba(15, 11, 10, 0.4), #0f0b0a),
                 url('opera_hero_bg.png') center/cover no-repeat;
+    background-blend-mode: overlay;
 }
 
 .hero::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at center, transparent 0%, rgba(15, 11, 10, 0.8) 100%);
+    /* 調整徑向遮罩：中心更透明 (0% -> 0.1), 邊緣稍淡 (0.8 -> 0.7) */
+    background: radial-gradient(circle at center, rgba(15, 11, 10, 0.1) 0%, rgba(15, 11, 10, 0.7) 100%);
     pointer-events: none;
 }
 
