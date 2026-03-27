@@ -16,61 +16,131 @@ document.addEventListener('DOMContentLoaded', () => {
         emailjs.init(EMAILJS_PUBLIC_KEY);
     }
 
-    // 1. 資料定義
+    // 1. 資料定義 (戲曲特化版)
     const venues = [
         {
             id: 'dance',
-            name: '舞動空間',
-            type: '舞蹈排練室',
+            name: '雲水排練場',
+            type: '武戲與身段排練室',
             capacity: '20-30人',
             price: '$800/hr',
-            tags: ['專業木地板', '全牆鏡面', '藍牙音響'],
+            tags: ['挑高空間', '專業彈性木地板', '全牆大鏡面'],
             image: 'assets/dance_studio.png'
         },
         {
             id: 'music',
-            name: '樂鳴中心',
-            type: '音樂排練室',
+            name: '絲竹雅音室',
+            type: '文場與唱腔排練室',
             capacity: '5-10人',
             price: '$600/hr',
-            tags: ['隔音加強', '平台鋼琴', '錄音設備'],
+            tags: ['文場器樂隔音', '戲曲排練專用桌椅', '錄製設備'],
             image: 'assets/music_room.png'
         },
         {
             id: 'theater',
-            name: '黑盒劇場',
-            type: '排演小劇場',
+            name: '梨園實驗劇場',
+            type: '總彩排黑盒劇場',
             capacity: '50-80人',
             price: '$1500/hr',
-            tags: ['專業燈光', '多功能黑盒', '階梯座椅'],
+            tags: ['專業舞台燈光', '多角度側幕', '階梯式觀眾席'],
             image: 'assets/black_box.png'
         }
     ];
 
-    // 1.5 資料持久化 (localStorage)
-    const STORAGE_KEY = 'rehearsal_bookings';
-    const todayStr = new Date().toISOString().split('T')[0];
-    const defaultBookings = [
-        {
+    // 1.5 Firebase 資料庫初始化 (取代原本的 localStorage)
+    const firebaseConfig = {
+        apiKey: "AIzaSyDplIrzsJEHIpFTS7HdqeojHV38Le_vAgA",
+        authDomain: "rental-b60e1.firebaseapp.com",
+        projectId: "rental-b60e1",
+        storageBucket: "rental-b60e1.firebasestorage.app",
+        messagingSenderId: "721096991036",
+        appId: "1:721096991036:web:cc868cb9d618ea77573e39"
+    };
+
+    let db = null;
+    let bookings = [];
+
+    // 若使用者填妥了 Firebase 金鑰，則執行連線與即時監聽
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+
+        // 【核心亮點】設定 onSnapshot 即時監聽 (Realtime Listener)
+        db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+            bookings = [];
+            snapshot.forEach((doc) => {
+                bookings.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // 當雲端資料有變更時，自動更新雙邊畫面 (跨裝置同步)
+            if (window.renderSchedule) window.renderSchedule();
+            const adminPanel = document.getElementById('adminPanel');
+            if (adminPanel && adminPanel.style.display === 'block') {
+                if (window.renderAdminList) window.renderAdminList();
+            }
+        }, (error) => {
+            console.error("Firebase 監聽錯誤:", error);
+            alert("無法連線雲端資料庫，請確認金鑰或網路連線");
+        });
+    } else {
+        // 備用方案：尚未填寫 Firebase 金鑰前，繼續使用 LocalStorage 確保體驗不中斷
+        const STORAGE_KEY = 'rehearsal_bookings';
+        const todayStr = new Date().toISOString().split('T')[0];
+        const defaultBookings = [{
             id: 'REQ-DEMO123',
             venue: 'dance',
             startDate: todayStr,
             endDate: todayStr,
             slots: ['午'],
-            groupName: '範例舞團',
-            applicant: '王小明',
+            groupName: '範例傳統劇團',
+            applicant: '陳掌櫃',
             email: 'demo@example.com',
-            purpose: '現代舞排練',
+            purpose: '京劇折子戲《打金磚》排練',
             status: '預約成功',
-            timestamp: new Date().toLocaleString('zh-TW')
+            timestamp: new Date().toLocaleString('zh-TW'),
+            totalRent: 'NT$ 3,200'
+        }];
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        bookings = storedData ? JSON.parse(storedData) : defaultBookings;
+
+        window.saveBookingsLocal = function() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
+        };
+    }
+
+    // 封裝通用庫存寫入函式 (供送出表單呼叫)
+    function addBookingToDB(formData) {
+        if (db) {
+            db.collection("bookings").doc(formData.id).set(formData).catch(err => {
+                console.error("寫入 Firebase 失敗:", err);
+                alert("寫入雲端資料庫失敗！");
+            });
+            // Firebase onSnapshot 會自動捕捉並更新畫面，此處不需手動 render
+        } else {
+            bookings.unshift(formData);
+            if (window.saveBookingsLocal) window.saveBookingsLocal();
+            if (window.renderAdminList) window.renderAdminList();
+            if (window.renderSchedule) window.renderSchedule();
         }
-    ];
+    }
 
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    const bookings = storedData ? JSON.parse(storedData) : defaultBookings;
-
-    function saveBookings() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
+    // 封裝通用狀態更新函式 (供後台核准/退回呼叫)
+    function updateBookingStatusToDB(id, newStatus) {
+        if (db) {
+            db.collection("bookings").doc(id).update({
+                status: newStatus
+            }).catch(err => {
+                console.error("更新 Firebase 狀態失敗:", err);
+            });
+        } else {
+            const item = bookings.find(b => b.id === id);
+            if (item) {
+                item.status = newStatus;
+                if (window.saveBookingsLocal) window.saveBookingsLocal();
+                if (window.renderAdminList) window.renderAdminList();
+                if (window.renderSchedule) window.renderSchedule();
+            }
+        }
     }
 
     // 2. DOM 元素
@@ -247,9 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
             timestamp: new Date().toLocaleString('zh-TW')
         };
 
-        bookings.unshift(formData);
-        saveBookings();
-        renderAdminList();
+        // 將表單資料透過封裝函式連線寫入 Firebase (或本機備用庫)
+        addBookingToDB(formData);
 
         alert('申請已成功提交！將由 Email 通知您後續審核結果。');
         bookingForm.reset();
@@ -626,24 +695,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.approveApplication = function (id) {
         const item = bookings.find(b => b.id === id);
         if (item) {
-            item.status = '預約成功';
-            saveBookings();
+            // 本地先修改狀態以供 EmailJS 抓取
+            item.status = '預約成功'; 
+            
+            // 同步狀態至雲端資料庫
+            updateBookingStatusToDB(id, '預約成功');
 
+            // 寄送通知信
             sendEmail(item, false);
-
-            renderAdminList();
-            if (window.renderSchedule) window.renderSchedule(); // 更新檔期表
         }
     };
 
     window.rejectApplication = function (id) {
         const item = bookings.find(b => b.id === id);
         if (item) {
-            item.status = '預約退回';
-            saveBookings();
+            updateBookingStatusToDB(id, '預約退回');
             alert(`【系統通知】已將退回訊息寄送至：${item.email}`);
-            renderAdminList();
-            if (window.renderSchedule) window.renderSchedule(); // 更新檔期表
         }
     };
 
