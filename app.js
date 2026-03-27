@@ -72,49 +72,48 @@ document.addEventListener('DOMContentLoaded', () => {
     let db = null;
     let bookings = [];
 
-    // 若使用者填妥了 Firebase 金鑰，則執行連線與即時監聽
-    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
+    // 【容錯優化】將初始化包裹在 try-catch 中，避免本地檔案瀏覽時因安全限制導致腳本崩潰
+    try {
+        if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR")) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
 
-        // 【場地動態監聽】載入管理員設定的各場地資訊與定價
-        db.collection("venues").orderBy("order", "asc").onSnapshot((snapshot) => {
-            venues = [];
-            snapshot.forEach((doc) => {
-                venues.push({ dbId: doc.id, ...doc.data() });
-            });
-            
-            if (venues.length === 0) {
-                // 初次使用專案時寫入種子場地
-                defaultVenues.forEach(v => db.collection("venues").add(v));
-            } else {
-                if (typeof window.renderVenues === 'function') window.renderVenues();
+            // 場地動態監聽
+            db.collection("venues").orderBy("order", "asc").onSnapshot((snapshot) => {
+                venues = [];
+                snapshot.forEach((doc) => {
+                    venues.push({ dbId: doc.id, ...doc.data() });
+                });
+                
+                if (venues.length === 0) {
+                    defaultVenues.forEach(v => db.collection("venues").add(v));
+                } else {
+                    if (typeof window.renderVenues === 'function') window.renderVenues();
+                    const adminPanel = document.getElementById('adminPanel');
+                    if (adminPanel && adminPanel.style.display === 'block') {
+                        if (window.renderAdminVenueList) window.renderAdminVenueList();
+                    }
+                }
+            }, (err) => console.log("Firebase Venues Offline:", err));
+
+            // 訂單監聽
+            db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                bookings = [];
+                snapshot.forEach((doc) => {
+                    bookings.push({ id: doc.id, ...doc.data() });
+                });
+                if (window.renderSchedule) window.renderSchedule();
                 const adminPanel = document.getElementById('adminPanel');
                 if (adminPanel && adminPanel.style.display === 'block') {
-                    if (window.renderAdminVenueList) window.renderAdminVenueList();
+                    if (window.renderAdminList) window.renderAdminList();
                 }
-            }
-        }, (err) => console.error(err));
-
-        // 【核心亮點】設定 onSnapshot 即時監聽訂單
-        db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-            bookings = [];
-            snapshot.forEach((doc) => {
-                bookings.push({ id: doc.id, ...doc.data() });
-            });
-            
-            // 當雲端資料有變更時，自動更新雙邊畫面 (跨裝置同步)
-            if (window.renderSchedule) window.renderSchedule();
-            const adminPanel = document.getElementById('adminPanel');
-            if (adminPanel && adminPanel.style.display === 'block') {
-                if (window.renderAdminList) window.renderAdminList();
-            }
-        }, (error) => {
-            console.error("Firebase 監聽錯誤:", error);
-            alert("無法連線雲端資料庫，請確認金鑰或網路連線");
-        });
-    } else {
-        // 備用方案：尚未填寫 Firebase 金鑰前，繼續使用 LocalStorage 確保體驗不中斷
+            }, (error) => console.log("Firebase Bookings Offline:", error));
+        } else {
+            throw new Error("Firebase not identified");
+        }
+    } catch (e) {
+        console.warn("系統正以純本地模式 (LocalStorage) 運行:", e.message);
+        // 備用方案：繼續使用 LocalStorage
         const STORAGE_KEY = 'rehearsal_bookings';
         const todayStr = new Date().toISOString().split('T')[0];
         const defaultBookings = [{
@@ -126,18 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
             groupName: '範例傳統劇團',
             applicant: '陳掌櫃',
             email: 'demo@example.com',
-            purpose: '京劇折子戲《打金磚》排練',
+            purpose: '本地模式範例',
             status: '預約成功',
             timestamp: new Date().toLocaleString('zh-TW'),
             totalRent: 'NT$ 3,200'
         }];
         const storedData = localStorage.getItem(STORAGE_KEY);
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
-
-        // 當無連線時，直接餵入本機預設場地
         venues = [...defaultVenues];
-        if (typeof window.renderVenues === 'function') window.renderVenues();
-
         window.saveBookingsLocal = function() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
         };
@@ -244,6 +239,19 @@ document.addEventListener('DOMContentLoaded', () => {
             venueSelect.innerHTML = '<option value="" disabled selected>請選擇您欲租借的排練場地</option>' + 
                 activeVenues.map(v => `<option value="${v.id}">${v.name} (${v.capacity})</option>`).join('');
             if (activeVenues.some(v => v.id === currentSelected)) venueSelect.value = currentSelected;
+        }
+
+        // 即時刷新檔期查詢的 Select選單
+        const scheduleVenue = document.getElementById('scheduleVenue');
+        if (scheduleVenue) {
+            const curSchedSelected = scheduleVenue.value;
+            scheduleVenue.innerHTML = activeVenues.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            if (activeVenues.some(v => v.id === curSchedSelected)) {
+                scheduleVenue.value = curSchedSelected;
+            } else if (activeVenues.length > 0) {
+                scheduleVenue.value = activeVenues[0].id;
+            }
+            scheduleVenue.dispatchEvent(new Event('change'));
         }
     };
     
@@ -416,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sections.forEach(section => observer.observe(section));
 
-    // 8. 自定義日曆組件邏輯
+    // 8. 自定義日曆組件佈局與邏輯
     function initCustomCalendar() {
         const picker = document.getElementById('calendarPicker');
         const daysContainer = document.getElementById('calendarDays');
@@ -426,10 +434,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('endDate'),
             document.getElementById('scheduleDate')
         ].filter(Boolean);
+        
         let currentActiveInput = null;
         let displayedDate = new Date();
 
         function renderCalendar(date) {
+            if (!daysContainer || !monthYearLabel) return;
             daysContainer.innerHTML = '';
             const year = date.getFullYear();
             const month = date.getMonth();
@@ -438,14 +448,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // 填充空白
             for (let i = 0; i < firstDay; i++) {
                 const empty = document.createElement('div');
                 empty.className = 'day empty';
                 daysContainer.appendChild(empty);
             }
 
-            // 填充日期
             for (let d = 1; d <= daysInMonth; d++) {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'day';
@@ -459,45 +467,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 const todayStr = new Date().toISOString().split('T')[0];
                 if (dateStr === todayStr) dayEl.classList.add('today');
 
-                dayEl.addEventListener('click', () => {
+                dayEl.addEventListener('click', (e) => {
                     if (currentActiveInput) {
                         currentActiveInput.value = dateStr;
                         picker.style.display = 'none';
                         currentActiveInput.dispatchEvent(new Event('change'));
+                        e.stopPropagation();
                     }
                 });
-
                 daysContainer.appendChild(dayEl);
             }
         }
 
         inputs.forEach(input => {
-            input.addEventListener('click', (e) => {
+            const handleOpen = (e) => {
                 currentActiveInput = input;
                 const rect = input.getBoundingClientRect();
                 picker.style.display = 'block';
-                picker.style.top = `${window.scrollY + rect.bottom + 10}px`;
-                picker.style.left = `${rect.left}px`;
+                
+                // 強大定位：使用 fixed 避免 scrollY 計算誤差，並支援 mobile 彈性置中
+                picker.style.position = 'fixed';
+                let topPos = rect.bottom + 10;
+                let leftPos = rect.left;
+
+                if (topPos + 350 > window.innerHeight) {
+                    topPos = rect.top - 360; 
+                }
+                if (window.innerWidth < 450) {
+                    leftPos = (window.innerWidth - 320) / 2;
+                } else if (leftPos + 320 > window.innerWidth) {
+                    leftPos = window.innerWidth - 340;
+                }
+                
+                picker.style.top = `${Math.max(10, topPos)}px`;
+                picker.style.left = `${Math.max(10, leftPos)}px`;
+                picker.style.zIndex = '9999';
+
                 renderCalendar(displayedDate);
+                e.preventDefault();
                 e.stopPropagation();
-            });
+            };
+
+            input.addEventListener('click', handleOpen);
+            input.addEventListener('touchstart', (e) => {
+                handleOpen(e);
+            }, {passive: false});
         });
 
-        document.getElementById('prevMonth').addEventListener('click', (e) => {
+        document.getElementById('prevMonth')?.addEventListener('click', (e) => {
             displayedDate.setMonth(displayedDate.getMonth() - 1);
             renderCalendar(displayedDate);
             e.stopPropagation();
         });
 
-        document.getElementById('nextMonth').addEventListener('click', (e) => {
+        document.getElementById('nextMonth')?.addEventListener('click', (e) => {
             displayedDate.setMonth(displayedDate.getMonth() + 1);
             renderCalendar(displayedDate);
             e.stopPropagation();
         });
 
-        // 點擊外面關閉
         document.addEventListener('click', (e) => {
-            if (!picker.contains(e.target) && !inputs.some(i => i.contains(e.target))) {
+            if (picker && !picker.contains(e.target) && !inputs.some(i => i.contains(e.target))) {
                 picker.style.display = 'none';
             }
         });
@@ -579,10 +609,10 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleVenueSelect.addEventListener('change', window.renderSchedule);
     scheduleDateInput.addEventListener('change', window.renderSchedule);
 
-    // 執行
-    renderVenues();
-    window.renderSchedule();
+    // 執行初始化
     initCustomCalendar();
+    renderVenues();
+    if (window.renderSchedule) window.renderSchedule();
 
     // --- 管理員登入與後台邏輯 ---
     const loginBtn = document.getElementById('loginBtn');
@@ -987,4 +1017,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(link);
         });
     }
+
+    // --- 最終啟動指令 ---
+    initCustomCalendar();
+    renderVenues();
+    if (window.renderSchedule) window.renderSchedule();
 });

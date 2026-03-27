@@ -348,11 +348,13 @@ section.visible {
 .calendar-icon {
     position: absolute;
     right: 15px;
-    bottom: 12px;
-    opacity: 0.5;
+    top: 65%; /* 考慮到 label 的高度，下移一點到 input 中心 */
+    transform: translateY(-50%);
+    opacity: 0.6;
     pointer-events: none;
+    font-size: 1.2rem;
+    z-index: 5;
 }
-
 .calendar-picker {
     position: absolute;
     width: 320px;
@@ -479,6 +481,13 @@ section.visible {
     font-weight: 500;
 }
 
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+}
+
 .schedule-table td {
     transition: all 0.3s ease;
 }
@@ -589,4 +598,124 @@ section.visible {
 .btn-danger:hover {
     background: #ef4444;
     color: white;
+}
+
+/* --- Mobile Responsive (Media Queries) --- */
+@media (max-width: 768px) {
+    /* Header & Navigation */
+    .glass-header {
+        position: relative;
+        padding: 20px;
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    .nav-links {
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+
+    /* Hero Section */
+    .hero {
+        padding: 40px 20px 60px;
+        text-align: center;
+        min-height: auto;
+    }
+    .hero-content h1 {
+        font-size: 1.6rem;
+        line-height: 1.4;
+        word-break: keep-all;
+        letter-spacing: -0.5px;
+    }
+    .hero-content p {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .hero-btns {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .btn-primary, .btn-secondary {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    /* 解決按鈕遮擋問題：在手機版讓 Header 內按鈕寬度適中 */
+    .glass-header .btn-primary, .glass-header .btn-secondary {
+        width: auto;
+        min-width: 200px;
+        margin: 5px auto;
+    }
+
+    /* Layout & Spacing */
+    main {
+        padding: 40px 15px;
+    }
+    .section-title {
+        font-size: 2rem;
+    }
+
+    /* Forms & Inputs */
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    .schedule-controls {
+        flex-direction: column;
+    }
+    .slot-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .slot-pill {
+        justify-content: center;
+    }
+    .glass-card {
+        padding: 1.5rem;
+    }
+
+    /* Grids */
+    .venue-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Modals */
+    .modal-content {
+        margin: 5% auto;
+        width: 95%;
+        padding: 20px;
+    }
+    /* 特別覆蓋場地詳情彈窗內部的特製 padding */
+    #venueDetailsModal .modal-content > div:nth-child(3) {
+        padding: 1.5rem !important;
+    }
+
+    /* Admin specific */
+    .admin-tabs {
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        flex: 1 1 45%;
+        text-align: center;
+        padding: 12px 10px;
+        font-size: 0.9rem;
+    }
+    .admin-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .admin-item > div {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    .admin-item button {
+        width: 100%;
+    }
 }
