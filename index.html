@@ -69,9 +69,10 @@
                             <option value="theater">黑盒劇場 (小劇場)</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; min-width: 250px;">
+                    <div class="form-group date-input-wrapper" style="flex: 1; min-width: 250px;">
                         <label for="scheduleDate">查詢起始日</label>
-                        <input type="date" id="scheduleDate">
+                        <input type="text" id="scheduleDate" placeholder="YYYY-MM-DD" readonly required>
+                        <span class="calendar-icon">📅</span>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -178,14 +179,31 @@
 
         <!-- 後台管理系統 -->
         <section id="adminPanel" class="admin-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h2 class="section-title" style="margin-bottom: 0;">後台管理 | 審核列表</h2>
-                <button class="btn-primary" id="exportCsvBtn" style="padding: 8px 16px; font-size: 0.9rem;">匯出報表
-                    (CSV)</button>
+            <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 class="section-title" style="margin-bottom: 0;">後台管理系統</h2>
+                <div class="admin-tabs" style="display: flex; gap: 15px;">
+                    <button class="btn-primary tab-btn active" data-tab="approvalsTab" style="padding: 8px 20px;">審核列表</button>
+                    <button class="btn-secondary tab-btn" data-tab="venuesTab" style="padding: 8px 20px;">場地管理</button>
+                </div>
             </div>
-            <div class="admin-list glass-card" id="adminList">
-                <div class="empty-state">
-                    <p>目前無待審核申請</p>
+            
+            <!-- 審核列表 Tab -->
+            <div id="approvalsTab" class="tab-content active" style="display: block;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                    <button class="btn-primary" id="exportCsvBtn" style="padding: 8px 16px; font-size: 0.9rem;">匯出報表 (CSV)</button>
+                </div>
+                <div class="admin-list glass-card" id="adminList">
+                    <div class="empty-state"><p>目前無待審核申請</p></div>
+                </div>
+            </div>
+
+            <!-- 場地管理 Tab -->
+            <div id="venuesTab" class="tab-content" style="display: none;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                    <button class="btn-primary" id="addVenueBtn" style="padding: 8px 16px; font-size: 0.9rem; background: var(--accent); color: #0f0b0a; font-weight: bold;">+ 新增場地</button>
+                </div>
+                <div class="admin-list glass-card" id="adminVenueList">
+                    <div class="empty-state"><p>載入場地資料中...</p></div>
                 </div>
             </div>
         </section>
@@ -223,6 +241,66 @@
                 <input type="password" id="adminPassword" placeholder="輸入密碼">
             </div>
             <button type="button" class="btn-primary" id="adminLoginSubmit" style="width: 100%;">登入</button>
+        </div>
+    </div>
+
+    <!-- 場地詳情 Modal -->
+    <div id="venueDetailsModal" class="modal">
+        <div class="modal-content glass-card" style="max-width: 600px; padding: 0; overflow-y: auto; max-height: 90vh; overflow-x: hidden;">
+            <span class="close-modal" style="z-index: 10;">&times;</span>
+            <div id="venueModalImage" style="height: 250px; background: #333; background-size: cover; background-position: center; border-radius: 12px 12px 0 0;"></div>
+            <div style="padding: 2rem;">
+                <h3 id="venueModalName" style="margin-bottom: 10px; font-size: 1.8rem; font-family: var(--font-heading);">場地名稱</h3>
+                <p id="venueModalTags" style="color: var(--accent); font-size: 1rem; margin-bottom: 15px; font-weight: 500;"></p>
+                <div id="venueModalDesc" style="color: var(--text-main); line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; font-size: 0.95rem;"></div>
+                
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <strong style="color: #fff; font-size: 1.05rem; display: block; margin-bottom: 10px;">時段專屬定價 (NT$)</strong>
+                    <ul style="list-style: none; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">早場 (08-12)<br><span id="venueModalPriceM" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">午場 (13-17)<br><span id="venueModalPriceA" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">晚場 (18-22)<br><span id="venueModalPriceE" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                    </ul>
+                </div>
+                <button type="button" class="btn-primary" id="bookVenueNowBtn" style="width: 100%; font-size: 1.1rem; padding: 12px;">選擇此場地並前往預約</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 後台場地編輯 Modal -->
+    <div id="venueEditModal" class="modal">
+        <div class="modal-content glass-card" style="max-width: 650px; overflow-y: auto; max-height: 90vh; overflow-x: hidden;">
+            <span class="close-modal">&times;</span>
+            <h3 style="margin-bottom: 20px; font-family: var(--font-heading);" id="venueEditTitle">新增/編輯 場地資訊</h3>
+            <form id="venueEditForm">
+                <input type="hidden" id="editVenueDbId">
+                <div class="form-row">
+                    <div class="form-group"><label>場地名稱</label><input type="text" id="editVenueName" required></div>
+                    <div class="form-group"><label>英文代號 (預設代入 url)</label><input type="text" id="editVenueAlias" required placeholder="如: theater_a"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>空間類型</label><input type="text" id="editVenueType" required placeholder="如: 武戲與身段排練室"></div>
+                    <div class="form-group"><label>可容納人數</label><input type="text" id="editVenueCapacity" required placeholder="如: 20-30人"></div>
+                </div>
+                <div class="form-group"><label>主視覺圖片網址 (完整路徑或 assets/...)</label><input type="text" id="editVenueImage" required></div>
+                <div class="form-group"><label>特色標籤 (以半形逗點 , 分隔)</label><input type="text" id="editVenueTags" required placeholder="例如: 挑高空間,全牆面大鏡,專用木地板"></div>
+                <div class="form-group"><label>詳細介紹文案</label><textarea id="editVenueDesc" rows="4" required></textarea></div>
+                
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-main);">各時段獨立定價 (NT$)</h4>
+                    <div class="form-row">
+                        <div class="form-group"><label>早場 (08:00-12:00)</label><input type="number" id="editVenuePriceM" required></div>
+                        <div class="form-group"><label>午場 (13:00-17:00)</label><input type="number" id="editVenuePriceA" required></div>
+                        <div class="form-group"><label>晚場 (18:00-22:00)</label><input type="number" id="editVenuePriceE" required></div>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                    <input type="checkbox" id="editVenueActive" style="width: 24px; height: 24px; accent-color: var(--accent);">
+                    <label for="editVenueActive" style="margin: 0; cursor: pointer; font-size: 1.1rem;">開放對外出租 (前台上架)</label>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">儲存並套用至雲端資料庫</button>
+            </form>
         </div>
     </div>
 

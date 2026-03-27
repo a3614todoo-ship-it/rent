@@ -16,34 +16,46 @@ document.addEventListener('DOMContentLoaded', () => {
         emailjs.init(EMAILJS_PUBLIC_KEY);
     }
 
-    // 1. 資料定義 (戲曲特化版)
-    const venues = [
+    // 1. 場地資源 (全域動態變數)
+    let venues = [];
+
+    // 預設資料 (若 Firebase 首次連線內部沒資料時，寫入這些當作種子)
+    const defaultVenues = [
         {
             id: 'dance',
             name: '雲水排練場',
             type: '武戲與身段排練室',
             capacity: '20-30人',
-            price: '$800/hr',
+            pricing: { morning: 3200, afternoon: 3200, evening: 4000 },
+            desc: '專為武戲與身段排練設計，高度達4米，配有專業彈性木地板與全牆面大鏡，適合各類甩髮、水袖及翻跌動作的日常排演。',
             tags: ['挑高空間', '專業彈性木地板', '全牆大鏡面'],
-            image: 'assets/dance_studio.png'
+            image: 'assets/dance_studio.png',
+            isActive: true,
+            order: 1
         },
         {
             id: 'music',
             name: '絲竹雅音室',
             type: '文場與唱腔排練室',
             capacity: '5-10人',
-            price: '$600/hr',
+            pricing: { morning: 2400, afternoon: 2400, evening: 3000 },
+            desc: '本空間提供絕佳的隔音設計與吸音材質，專為文場伴奏、京胡、二胡等傳統戲曲器樂及演員吊嗓唱腔排練打造。',
             tags: ['文場器樂隔音', '戲曲排練專用桌椅', '錄製設備'],
-            image: 'assets/music_room.png'
+            image: 'assets/music_room.png',
+            isActive: true,
+            order: 2
         },
         {
             id: 'theater',
             name: '梨園實驗劇場',
             type: '總彩排黑盒劇場',
             capacity: '50-80人',
-            price: '$1500/hr',
+            pricing: { morning: 6000, afternoon: 6000, evening: 7500 },
+            desc: '可容納多名演員進行全劇走位與總彩排。配備頂級舞臺燈光及多視角側幕，並附設階梯式觀眾席供導演與劇團內部觀摩。',
             tags: ['專業舞台燈光', '多角度側幕', '階梯式觀眾席'],
-            image: 'assets/black_box.png'
+            image: 'assets/black_box.png',
+            isActive: true,
+            order: 3
         }
     ];
 
@@ -65,7 +77,26 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
 
-        // 【核心亮點】設定 onSnapshot 即時監聽 (Realtime Listener)
+        // 【場地動態監聽】載入管理員設定的各場地資訊與定價
+        db.collection("venues").orderBy("order", "asc").onSnapshot((snapshot) => {
+            venues = [];
+            snapshot.forEach((doc) => {
+                venues.push({ dbId: doc.id, ...doc.data() });
+            });
+            
+            if (venues.length === 0) {
+                // 初次使用專案時寫入種子場地
+                defaultVenues.forEach(v => db.collection("venues").add(v));
+            } else {
+                if (typeof window.renderVenues === 'function') window.renderVenues();
+                const adminPanel = document.getElementById('adminPanel');
+                if (adminPanel && adminPanel.style.display === 'block') {
+                    if (window.renderAdminVenueList) window.renderAdminVenueList();
+                }
+            }
+        }, (err) => console.error(err));
+
+        // 【核心亮點】設定 onSnapshot 即時監聽訂單
         db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
             bookings = [];
             snapshot.forEach((doc) => {
@@ -102,6 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }];
         const storedData = localStorage.getItem(STORAGE_KEY);
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
+
+        // 當無連線時，直接餵入本機預設場地
+        venues = [...defaultVenues];
+        if (typeof window.renderVenues === 'function') window.renderVenues();
 
         window.saveBookingsLocal = function() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
@@ -149,53 +184,96 @@ document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('section');
     const scheduleSection = document.getElementById('schedule');
 
-    // 租金計算輔助函式
-    function calculateTotalRent(venueId, startDate, endDate, slotsCount) {
+    // 租金計算輔助函式 (動態早午晚加總演算法)
+    function calculateTotalRent(venueId, startDate, endDate, selectedSlotKeys) {
         const venue = venues.find(v => v.id === venueId);
         if (!venue) return 0;
 
-        const priceStr = venue.price.replace(/[^0-9]/g, '');
-        const pricePerHour = parseInt(priceStr, 10) || 0;
-
         const start = new Date(startDate);
         const end = new Date(endDate);
-        const diffTime = Math.abs(end - start);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const diffDays = Math.max(1, Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1);
 
-        const hoursPerSlot = 4;
-        return diffDays * slotsCount * hoursPerSlot * pricePerHour;
+        let dailyRent = 0;
+        if (venue.pricing) {
+            selectedSlotKeys.forEach(slot => {
+                if (slot.includes('早')) dailyRent += venue.pricing.morning;
+                else if (slot.includes('午')) dailyRent += venue.pricing.afternoon;
+                else if (slot.includes('晚')) dailyRent += venue.pricing.evening;
+            });
+        } else {
+            // 防呆舊制算法
+            const pricePerHour = parseInt((venue.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+            dailyRent = selectedSlotKeys.length * 4 * pricePerHour;
+        }
+
+        return dailyRent * diffDays;
     }
 
     // 3. 初始化場地展示
-    function renderVenues() {
-        venueGrid.innerHTML = venues.map(venue => `
+    window.renderVenues = function() {
+        const activeVenues = venues.filter(v => v.isActive !== false);
+        const venueGrid = document.getElementById('venueGrid');
+        if (!venueGrid) return;
+        
+        venueGrid.innerHTML = activeVenues.map(venue => {
+            const displayPrice = venue.pricing ? `$${venue.pricing.morning} 起 / 時段` : venue.price;
+            return `
             <div class="venue-card">
-                <img src="${venue.image}" alt="${venue.name}" class="venue-img">
+                <div class="venue-img" style="background-image: url('${venue.image}'); background-size: cover; background-position: center; height: 260px;"></div>
                 <div class="venue-info">
                     <div class="venue-tags">
-                        ${venue.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${(venue.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
                     </div>
                     <h3>${venue.name}</h3>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">
                         適合：${venue.type} | 容量：${venue.capacity}
                     </p>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; color: var(--accent);">${venue.price}</span>
-                        <button class="btn-secondary select-venue-btn" data-id="${venue.id}">選擇</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
+                        <span style="font-weight: 700; color: var(--accent);">${displayPrice}</span>
+                        <button class="btn-secondary" onclick="openVenueModal('${venue.id}')" style="padding: 8px 16px;">瞭解詳情</button>
                     </div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
-        // 綁定選取按鈕
-        document.querySelectorAll('.select-venue-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const venueId = e.target.getAttribute('data-id');
-                document.getElementById('venueSelect').value = venueId;
+        // 即時刷新表單的 Select選單
+        const venueSelect = document.getElementById('venueSelect');
+        if (venueSelect) {
+            const currentSelected = venueSelect.value;
+            venueSelect.innerHTML = '<option value="" disabled selected>請選擇您欲租借的排練場地</option>' + 
+                activeVenues.map(v => `<option value="${v.id}">${v.name} (${v.capacity})</option>`).join('');
+            if (activeVenues.some(v => v.id === currentSelected)) venueSelect.value = currentSelected;
+        }
+    };
+    
+    // 開啟「場地詳情 Modal」公用函式
+    window.openVenueModal = function(id) {
+        const v = venues.find(x => x.id === id);
+        if (!v) return;
+        document.getElementById('venueModalName').textContent = v.name;
+        document.getElementById('venueModalTags').textContent = (v.tags || []).join(' | ');
+        document.getElementById('venueModalDesc').textContent = v.desc || '暫無說明。';
+        document.getElementById('venueModalImage').style.backgroundImage = `url('${v.image}')`;
+        
+        document.getElementById('venueModalPriceM').textContent = v.pricing ? v.pricing.morning.toLocaleString() : 'N/A';
+        document.getElementById('venueModalPriceA').textContent = v.pricing ? v.pricing.afternoon.toLocaleString() : 'N/A';
+        document.getElementById('venueModalPriceE').textContent = v.pricing ? v.pricing.evening.toLocaleString() : 'N/A';
+        
+        document.getElementById('bookVenueNowBtn').onclick = () => {
+            document.getElementById('venueDetailsModal').classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('venueDetailsModal').style.display = 'none';
+                document.getElementById('venueSelect').value = v.id;
                 window.location.hash = 'booking';
-            });
-        });
-    }
+            }, 300);
+        };
+        
+        const modal = document.getElementById('venueDetailsModal');
+        modal.style.display = 'flex';
+        modal.offsetHeight;
+        modal.classList.add('show');
+    };
 
     // 4. 表單分段切換邏輯
     const nextBtn = document.querySelector('.next-step');
@@ -255,8 +333,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 動態試算並顯示總金額
-        const totalRent = calculateTotalRent(venueVal, startDate, endDate, slotElms.length);
+        // 動態試算並顯示總金額 (傳入選定的文字陣列，如 ["早", "晚"])
+        const totalRent = calculateTotalRent(venueVal, startDate, endDate, reqSlotsTexts);
         const totalRentDisplay = document.getElementById('totalRentDisplay');
         if (totalRentDisplay) {
             totalRentDisplay.textContent = `NT$ ${totalRent.toLocaleString()}`;
@@ -343,7 +421,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const picker = document.getElementById('calendarPicker');
         const daysContainer = document.getElementById('calendarDays');
         const monthYearLabel = document.getElementById('calendarMonthYear');
-        const inputs = [document.getElementById('startDate'), document.getElementById('endDate')];
+        const inputs = [
+            document.getElementById('startDate'), 
+            document.getElementById('endDate'),
+            document.getElementById('scheduleDate')
+        ].filter(Boolean);
         let currentActiveInput = null;
         let displayedDate = new Date();
 
@@ -381,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentActiveInput) {
                         currentActiveInput.value = dateStr;
                         picker.style.display = 'none';
+                        currentActiveInput.dispatchEvent(new Event('change'));
                     }
                 });
 
@@ -712,6 +795,156 @@ document.addEventListener('DOMContentLoaded', () => {
             updateBookingStatusToDB(id, '預約退回');
             alert(`【系統通知】已將退回訊息寄送至：${item.email}`);
         }
+    };
+
+    // ============================================
+    // 後台：場地管理系統 (Tabs 與新增/編輯邏輯)
+    // ============================================
+
+    // 後台切換 Tabs 邏輯
+    document.querySelectorAll('.admin-tabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.admin-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.admin-section .tab-content').forEach(c => c.style.display = 'none');
+            
+            const targetId = e.currentTarget.getAttribute('data-tab');
+            e.currentTarget.classList.add('active');
+            document.getElementById(targetId).style.display = 'block';
+            
+            if (targetId === 'venuesTab' && typeof window.renderAdminVenueList === 'function') {
+                window.renderAdminVenueList();
+            }
+        });
+    });
+
+    // 渲染後台場地列表
+    window.renderAdminVenueList = function() {
+        const adminVenueList = document.getElementById('adminVenueList');
+        if (!adminVenueList) return;
+
+        if (venues.length === 0) {
+            adminVenueList.innerHTML = '<div class="empty-state"><p>沒有場地資料</p></div>';
+            return;
+        }
+
+        adminVenueList.innerHTML = venues.map(v => `
+            <div class="admin-item" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 70px; height: 70px; border-radius: 8px; background-image: url('${v.image}'); background-size: cover; background-position: center; border: 2px solid ${v.isActive ? 'var(--accent)' : '#555'};"></div>
+                    <div>
+                        <h4 style="margin-bottom: 5px; font-size: 1.1rem;">${v.name} <span style="font-size:0.85rem; color: var(--text-muted); font-weight: normal;">(${v.id})</span></h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            狀態: <span style="color: ${v.isActive ? 'var(--accent)' : '#ff4d4d'}; font-weight: bold;">${v.isActive ? '開放營業中' : '已下架'}</span>
+                            | 價格: 早 ${v.pricing?.morning}/午 ${v.pricing?.afternoon}/晚 ${v.pricing?.evening}
+                        </p>
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 8px 20px; font-size: 0.95rem;">編輯</button>
+            </div>
+        `).join('');
+    };
+
+    // 場地編輯 Modal 控制邏輯
+    const venueEditModal = document.getElementById('venueEditModal');
+    const venueEditForm = document.getElementById('venueEditForm');
+    const addVenueBtn = document.getElementById('addVenueBtn');
+
+    if (addVenueBtn) {
+        addVenueBtn.addEventListener('click', () => {
+            if (venues.length >= 6) {
+                alert('系統限制最多僅能開放 6 個場地，請直接修改現有場地！');
+                return;
+            }
+            document.getElementById('venueEditTitle').textContent = '新增場地';
+            venueEditForm.reset();
+            document.getElementById('editVenueDbId').value = '';
+            document.getElementById('editVenueActive').checked = true;
+            
+            venueEditModal.style.display = 'flex';
+            venueEditModal.offsetHeight; // trigger reflow
+            venueEditModal.classList.add('show');
+        });
+    }
+
+    // Modal 關閉按鈕通用綁定
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+    });
+    // 點擊背景關閉
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            e.target.classList.remove('show');
+            setTimeout(() => e.target.style.display = 'none', 300);
+        }
+    });
+
+    // 處理編輯表單送出 (寫回 Firebase)
+    if (venueEditForm) {
+        venueEditForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dbId = document.getElementById('editVenueDbId').value;
+            const pm = parseInt(document.getElementById('editVenuePriceM').value, 10);
+            const pa = parseInt(document.getElementById('editVenuePriceA').value, 10);
+            const pe = parseInt(document.getElementById('editVenuePriceE').value, 10);
+            
+            const newVenue = {
+                id: document.getElementById('editVenueAlias').value,
+                name: document.getElementById('editVenueName').value,
+                type: document.getElementById('editVenueType').value,
+                capacity: document.getElementById('editVenueCapacity').value,
+                image: document.getElementById('editVenueImage').value,
+                tags: document.getElementById('editVenueTags').value.split(',').map(s => s.trim()).filter(Boolean),
+                desc: document.getElementById('editVenueDesc').value,
+                pricing: { morning: pm, afternoon: pa, evening: pe },
+                isActive: document.getElementById('editVenueActive').checked,
+            };
+
+            if (dbId && db) {
+                // Update
+                db.collection("venues").doc(dbId).update(newVenue).then(() => {
+                    venueEditModal.classList.remove('show');
+                    setTimeout(() => venueEditModal.style.display = 'none', 300);
+                    alert('場地已更新！前台畫面將自動同步。');
+                });
+            } else if (db) {
+                // Add
+                newVenue.order = venues.length + 1;
+                db.collection("venues").add(newVenue).then(() => {
+                    venueEditModal.classList.remove('show');
+                    setTimeout(() => venueEditModal.style.display = 'none', 300);
+                    alert('場地已新增！前台畫面將自動同步。');
+                });
+            } else {
+                alert('提示：目前處於本機離線模式，未填入 Firebase 金鑰，因此無法儲存變更設定。');
+            }
+        });
+    }
+
+    window.editVenue = function(dbId) {
+        const v = venues.find(x => x.dbId === dbId);
+        if (!v) return;
+        
+        document.getElementById('venueEditTitle').textContent = '編輯場地資訊';
+        document.getElementById('editVenueDbId').value = v.dbId;
+        document.getElementById('editVenueAlias').value = v.id;
+        document.getElementById('editVenueName').value = v.name;
+        document.getElementById('editVenueType').value = v.type;
+        document.getElementById('editVenueCapacity').value = v.capacity;
+        document.getElementById('editVenueImage').value = v.image;
+        document.getElementById('editVenueTags').value = (v.tags || []).join(', ');
+        document.getElementById('editVenueDesc').value = v.desc || '';
+        document.getElementById('editVenuePriceM').value = v.pricing ? v.pricing.morning : 0;
+        document.getElementById('editVenuePriceA').value = v.pricing ? v.pricing.afternoon : 0;
+        document.getElementById('editVenuePriceE').value = v.pricing ? v.pricing.evening : 0;
+        document.getElementById('editVenueActive').checked = v.isActive !== false;
+        
+        venueEditModal.style.display = 'flex';
+        venueEditModal.offsetHeight;
+        venueEditModal.classList.add('show');
     };
 
     // CSV 報表導出功能
