@@ -722,3 +722,218 @@ section.visible {
         width: 100%;
     }
 }
+
+/* --- Equipment Selection UI (Advanced) --- */
+.equipment-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.equip-item-advanced {
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.equip-item-advanced:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(219, 179, 89, 0.1);
+}
+
+.equip-img {
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.equip-img.placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.5);
+}
+
+.equip-content {
+    padding: 15px;
+    flex: 1;
+}
+
+.equip-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-main);
+    display: block;
+    margin-bottom: 5px;
+}
+
+.equip-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: block;
+    line-height: 1.4;
+    margin-bottom: 10px;
+    min-height: 40px;
+}
+
+.equip-price {
+    font-size: 0.95rem;
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.equip-actions {
+    padding: 15px;
+    border-top: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.equip-qty-input {
+    width: 80px;
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.equip-qty-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(30, 41, 59, 0.9);
+}
+
+#equipmentEditForm .form-group {
+    margin-bottom: 20px;
+}
+
+.admin-item-equip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.admin-equip-content {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.admin-equip-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+    .equipment-selection-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
+   Print Receipt Styles (列印收據專用樣式)
+   ========================================= */
+.receipt-wrapper {
+    display: none;
+}
+
+@media print {
+    body * { visibility: hidden; }
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    #printReceiptWrapper, #printReceiptWrapper * { visibility: visible; }
+    #printReceiptWrapper {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 40px;
+        box-sizing: border-box;
+        font-family: 'Inter', "Noto Sans TC", sans-serif;
+        color: #000;
+        background: #fff;
+    }
+    .receipt-header {
+        text-align: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .receipt-header h2 {
+        font-size: 24px;
+        margin-bottom: 5px;
+        color: #000;
+        font-family: 'Outfit', "Noto Serif TC", serif;
+    }
+    .receipt-header p { font-size: 14px; color: #555; }
+    .receipt-section { margin-bottom: 30px; }
+    .receipt-section h3 {
+        font-size: 16px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+        margin-bottom: 15px;
+    }
+    .receipt-section p { margin: 8px 0; font-size: 14px; }
+    .receipt-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .receipt-table th, .receipt-table td {
+        border-bottom: 1px dashed #ccc;
+        padding: 10px 5px;
+        font-size: 14px;
+        text-align: left;
+    }
+    .receipt-total {
+        text-align: right;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #000;
+    }
+    .receipt-total .amount {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    .receipt-signatures {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 80px;
+    }
+    .sig-box { width: 40%; text-align: center; }
+    .sig-line {
+        border-bottom: 1px solid #000;
+        margin-top: 40px;
+    }
+}

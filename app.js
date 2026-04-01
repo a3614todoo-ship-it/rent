@@ -59,6 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
+    // 1.1 器材資源 (新增器材清單)
+    let equipment = [];
+    const defaultEquipment = [
+        { name: '京胡 (專業級)', price: 500, totalQty: 5, description: '專業演出的京胡，附琴絃支撐。', image: 'assets/jinghu.png', isActive: true, order: 1 },
+        { name: '單皮鼓與板 (組)', price: 400, totalQty: 3, description: '傳統武場打擊樂器，含鼓架。', image: 'assets/bangu_clapper.png', isActive: true, order: 2 },
+        { name: '一桌二椅 (組)', price: 800, totalQty: 2, description: '傳統梨園舞台調度必備桌椅。', image: 'assets/table_chairs.png', isActive: true, order: 3 },
+        { name: '無線麥克風 (一組兩入)', price: 600, totalQty: 4, description: '高品質U頻無線系統，附備用電池。', image: 'assets/wireless_mics.png', isActive: true, order: 4 },
+        { name: '移動式大鏡子', price: 200, totalQty: 6, description: '全身式帶輪鏡子，適合身段與走位校正。', image: 'assets/moveable_mirror.png', isActive: true, order: 5 }
+    ];
+
     // 1.5 Firebase 資料庫初始化 (取代原本的 localStorage)
     const firebaseConfig = {
         apiKey: "AIzaSyDplIrzsJEHIpFTS7HdqeojHV38Le_vAgA",
@@ -95,6 +105,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }, (err) => console.log("Firebase Venues Offline:", err));
+
+            // 【新增】器材動態監聽
+            db.collection("equipment").orderBy("order", "asc").onSnapshot((snapshot) => {
+                equipment = [];
+                snapshot.forEach((doc) => {
+                    equipment.push({ dbId: doc.id, ...doc.data() });
+                });
+                
+                if (equipment.length === 0) {
+                    defaultEquipment.forEach(e => db.collection("equipment").add(e));
+                } else {
+                    if (typeof window.renderBookingEquipment === 'function') window.renderBookingEquipment();
+                    const adminPanel = document.getElementById('adminPanel');
+                    if (adminPanel && adminPanel.style.display === 'block') {
+                        if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
+                    }
+                }
+            }, (err) => console.log("Firebase Equipment Offline:", err));
 
             // 訂單監聽
             db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
@@ -133,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const storedData = localStorage.getItem(STORAGE_KEY);
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
         venues = [...defaultVenues];
+        equipment = [...defaultEquipment]; // 本地模式也載入器材
         window.saveBookingsLocal = function() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
         };
@@ -179,29 +208,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('section');
     const scheduleSection = document.getElementById('schedule');
 
-    // 租金計算輔助函式 (動態早午晚加總演算法)
-    function calculateTotalRent(venueId, startDate, endDate, selectedSlotKeys) {
+    // 租金計算輔助函式 (動態早午晚加總演算法 + 器材租金[支援數量])
+    function calculateTotalRent(venueId, startDate, endDate, selectedSlotKeys, selectedEquipments = []) {
         const venue = venues.find(v => v.id === venueId);
         if (!venue) return 0;
 
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diffDays = Math.max(1, Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1);
+        const totalSlotsCount = selectedSlotKeys.length * diffDays;
 
-        let dailyRent = 0;
+        // 1. 計算空間租金
+        let dailyVenueRent = 0;
         if (venue.pricing) {
             selectedSlotKeys.forEach(slot => {
-                if (slot.includes('早')) dailyRent += venue.pricing.morning;
-                else if (slot.includes('午')) dailyRent += venue.pricing.afternoon;
-                else if (slot.includes('晚')) dailyRent += venue.pricing.evening;
+                if (slot.includes('早')) dailyVenueRent += (venue.pricing.morning || 0);
+                else if (slot.includes('午')) dailyVenueRent += (venue.pricing.afternoon || 0);
+                else if (slot.includes('晚')) dailyVenueRent += (venue.pricing.evening || 0);
             });
         } else {
-            // 防呆舊制算法
             const pricePerHour = parseInt((venue.price || '').replace(/[^0-9]/g, ''), 10) || 0;
-            dailyRent = selectedSlotKeys.length * 4 * pricePerHour;
+            dailyVenueRent = selectedSlotKeys.length * 4 * pricePerHour;
         }
+        let totalVenueRent = dailyVenueRent * diffDays;
 
-        return dailyRent * diffDays;
+        // 2. 計算器材租金 (按時段計費 × 數量)
+        let totalEquipRent = 0;
+        selectedEquipments.forEach(eq => {
+            const item = equipment.find(e => e.dbId === eq.id);
+            if (item && item.price) {
+                totalEquipRent += (item.price * eq.qty * totalSlotsCount);
+            }
+        });
+
+        return totalVenueRent + totalEquipRent;
     }
 
     // 3. 初始化場地展示
@@ -254,6 +294,135 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleVenue.dispatchEvent(new Event('change'));
         }
     };
+
+    // 3.1 渲染前台「預約表單」的器材選項 (圖文與數量)
+    function getEquipImage(e) {
+        if (e.image) return e.image;
+        const defaultMatch = defaultEquipment.find(d => d.name === e.name);
+        return defaultMatch ? defaultMatch.image : 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=200&q=80';
+    }
+
+    function getAvailableEquipQty(equipItem, reqStartDate, reqEndDate, reqSlotsTexts) {
+        if (!reqStartDate || !reqEndDate || reqSlotsTexts.length === 0) return equipItem.totalQty;
+        
+        let maxBorrowed = 0;
+        
+        // 評估所選每一天與每一場次中，該器材被借出的「最大併發數量」
+        reqSlotsTexts.forEach(slot => {
+            let start = new Date(reqStartDate);
+            let end = new Date(reqEndDate);
+            for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+                let dateStr = d.toISOString().split('T')[0];
+                let currentSlotBorrowed = 0;
+                
+                bookings.forEach(b => {
+                    if (b.status !== '預約成功' && b.status !== '審核中') return;
+                    if (dateStr >= b.startDate && dateStr <= b.endDate && b.slots.includes(slot)) {
+                        if (b.equipment && Array.isArray(b.equipment)) {
+                            b.equipment.forEach(eq => {
+                                // 相容舊版字串格式與新版物件格式
+                                if (typeof eq === 'string') {
+                                    if (eq.includes(equipItem.name)) {
+                                        let match = eq.match(/\(x(\d+)\)/);
+                                        currentSlotBorrowed += (match ? parseInt(match[1]) : 1);
+                                    }
+                                } else if (eq.id === equipItem.dbId || eq.name === equipItem.name) {
+                                    currentSlotBorrowed += (parseInt(eq.qty) || 0);
+                                }
+                            });
+                        }
+                    }
+                });
+                if (currentSlotBorrowed > maxBorrowed) maxBorrowed = currentSlotBorrowed;
+            }
+        });
+        
+        let available = equipItem.totalQty - maxBorrowed;
+        return available < 0 ? 0 : available;
+    }
+
+    window.renderBookingEquipment = function() {
+        const container = document.getElementById('bookingEquipmentContainer');
+        if (!container) return;
+        
+        const activeEquip = equipment.filter(e => e.isActive !== false);
+        if (activeEquip.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">目前無可用附加器材。</p>';
+            return;
+        }
+
+        // 動態取得當下所選日期與時段，以此扣算有效庫存
+        const reqStartDate = document.getElementById('startDate').value;
+        const reqEndDate = document.getElementById('endDate').value;
+        const slotElms = document.querySelectorAll('input[name="slots"]:checked');
+        const reqSlotsTexts = Array.from(slotElms).map(el => el.parentElement.querySelector('span').textContent.split(' ')[0]);
+
+        container.innerHTML = activeEquip.map(e => {
+            const availQty = getAvailableEquipQty(e, reqStartDate, reqEndDate, reqSlotsTexts);
+            const imgUrl = getEquipImage(e);
+            
+            return `
+            <div class="equip-item-advanced">
+                <div class="equip-img" style="background-image: url('${imgUrl}');"></div>
+                <div class="equip-content">
+                    <span class="equip-name">${e.name}</span>
+                    <span class="equip-desc">${e.description || '無詳細說明'}</span>
+                    <span class="equip-price">NT$ ${e.price.toLocaleString()} / 時段</span>
+                </div>
+                <div class="equip-actions">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 5px;">
+                        本時段可借數量：<span style="color:${availQty > 0 ? 'var(--accent)' : '#ef4444'}; font-weight:bold;">${availQty}</span> / 總量(${e.totalQty})
+                    </label>
+                    <input type="number" class="equip-qty-input" data-id="${e.dbId}" min="0" max="${availQty}" value="0" ${availQty === 0 ? 'disabled' : ''}>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        // 監聽數量變化事件，即時更新總金額
+        container.querySelectorAll('.equip-qty-input').forEach(input => {
+            input.addEventListener('change', () => {
+                // 防呆：不可小於0，不可大於總數
+                let val = parseInt(input.value, 10) || 0;
+                const max = parseInt(input.getAttribute('max'), 10) || 0;
+                if (val < 0) val = 0;
+                if (val > max) val = max;
+                input.value = val;
+
+                const nextBtn = document.querySelector('.next-step');
+                if (nextBtn) {
+                   updateTotalRentPreview();
+                }
+            });
+        });
+    };
+
+    // 輔助函式：從表單當前內容獲取參數並更新預覽租金
+    function updateTotalRentPreview() {
+        const venueVal = document.getElementById('venueSelect').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const slotElms = document.querySelectorAll('input[name="slots"]:checked');
+        
+        if (!venueVal || !startDate || !endDate || slotElms.length === 0) return;
+
+        const reqSlotsTexts = Array.from(slotElms).map(el => el.parentElement.querySelector('span').textContent.split(' ')[0]);
+        
+        // 抓取數量大於 0 的器材
+        const selectedEquipments = [];
+        document.querySelectorAll('.equip-qty-input').forEach(input => {
+            const qty = parseInt(input.value, 10);
+            if (qty > 0) {
+                selectedEquipments.push({ id: input.getAttribute('data-id'), qty: qty });
+            }
+        });
+        
+        const totalRent = calculateTotalRent(venueVal, startDate, endDate, reqSlotsTexts, selectedEquipments);
+        const totalRentDisplay = document.getElementById('totalRentDisplay');
+        if (totalRentDisplay) {
+            totalRentDisplay.textContent = `NT$ ${totalRent.toLocaleString()}`;
+        }
+    }
     
     // 開啟「場地詳情 Modal」公用函式
     window.openVenueModal = function(id) {
@@ -341,12 +510,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 動態試算並顯示總金額 (傳入選定的文字陣列，如 ["早", "晚"])
-        const totalRent = calculateTotalRent(venueVal, startDate, endDate, reqSlotsTexts);
-        const totalRentDisplay = document.getElementById('totalRentDisplay');
-        if (totalRentDisplay) {
-            totalRentDisplay.textContent = `NT$ ${totalRent.toLocaleString()}`;
-        }
+        // 刷新第二步器材的動態庫存數字
+        window.renderBookingEquipment();
+
+        // 動態試算並顯示總金額
+        updateTotalRentPreview();
 
         steps[0].classList.remove('active');
         steps[1].classList.add('active');
@@ -388,12 +556,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const selectedEquipInputs = document.querySelectorAll('.equip-qty-input');
+        const equipmentNames = [];
+        selectedEquipInputs.forEach(input => {
+            const qty = parseInt(input.value, 10);
+            if (qty > 0) {
+                const item = equipment.find(e => e.dbId === input.getAttribute('data-id'));
+                if (item) {
+                    equipmentNames.push(`${item.name} (x${qty})`);
+                }
+            }
+        });
+
         const formData = {
             id: 'REQ-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
             venue: document.getElementById('venueSelect').value,
             startDate: document.getElementById('startDate').value,
             endDate: document.getElementById('endDate').value,
             slots: Array.from(document.querySelectorAll('input[name="slots"]:checked')).map(el => el.parentElement.querySelector('span').textContent.split(' ')[0]),
+            equipment: equipmentNames, // 新增器材欄位
             groupName: document.getElementById('groupName').value,
             applicant: document.getElementById('applicantName').value,
             email: document.getElementById('email').value,
@@ -606,6 +787,38 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleBody.innerHTML = bodyHtml;
     };
 
+    // 9.1 渲染後台「器材管理」清單
+    window.renderAdminEquipmentList = function() {
+        const container = document.getElementById('adminEquipmentList');
+        if (!container) return;
+
+        if (equipment.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>載入器材中...</p></div>';
+            return;
+        }
+
+        container.innerHTML = equipment.map(e => `
+            <div class="admin-item-equip">
+                <div class="admin-equip-content">
+                    ${e.image ? `<div class="admin-equip-img" style="background-image: url('${e.image}');"></div>` : '<div class="admin-equip-img" style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.5); font-size:1.5rem;">📷</div>'}
+                    <div>
+                        <h4 style="margin-bottom: 5px;">${e.name} ${e.isActive ? '' : '<span style="color: #ef4444; font-size: 0.75rem;">(已下架)</span>'}</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 3px;">
+                            價格: NT$ ${e.price} / 庫存: ${e.totalQty}
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-main);">
+                            ${e.description || '無描述'}
+                        </p>
+                    </div>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn-success" onclick="editEquip('${e.dbId}')" style="background: rgba(219, 179, 89, 0.2); border-color: var(--accent); color: var(--accent);">編輯專屬</button>
+                    <button class="btn-danger" onclick="deleteEquip('${e.dbId}')">刪除</button>
+                </div>
+            </div>
+        `).join('');
+    };
+
     scheduleVenueSelect.addEventListener('change', window.renderSchedule);
     scheduleDateInput.addEventListener('change', window.renderSchedule);
 
@@ -723,6 +936,126 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 9.2 後台頁籤切換邏輯
+    const adminTabs = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    adminTabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-tab');
+            
+            adminTabs.forEach(b => {
+                b.classList.remove('active', 'btn-primary');
+                b.classList.add('btn-secondary');
+            });
+            btn.classList.add('active', 'btn-primary');
+            btn.classList.remove('btn-secondary');
+
+            tabContents.forEach(content => {
+                content.style.display = content.id === target ? 'block' : 'none';
+            });
+
+            if (target === 'equipmentTab' && typeof window.renderAdminEquipmentList === 'function') window.renderAdminEquipmentList();
+            if (target === 'venuesTab' && typeof window.renderAdminVenueList === 'function') window.renderAdminVenueList();
+        });
+    });
+
+    // 9.3 器材管理 CRUD
+    const equipmentEditModal = document.getElementById('equipmentEditModal');
+    const equipmentEditForm = document.getElementById('equipmentEditForm');
+    const addEquipmentBtn = document.getElementById('addEquipmentBtn');
+
+    if (addEquipmentBtn) {
+        addEquipmentBtn.addEventListener('click', () => {
+            document.getElementById('equipmentEditTitle').textContent = '新增器材項目';
+            document.getElementById('editEquipDbId').value = '';
+            document.getElementById('editEquipName').value = '';
+            document.getElementById('editEquipPrice').value = '';
+            document.getElementById('editEquipQty').value = '';
+            document.getElementById('editEquipDesc').value = '';
+            document.getElementById('editEquipImage').value = '';
+            document.getElementById('editEquipActive').checked = true;
+            
+            if (equipmentEditModal) {
+                equipmentEditModal.style.display = 'flex';
+                equipmentEditModal.offsetHeight;
+                equipmentEditModal.classList.add('show');
+            }
+        });
+    }
+
+    window.editEquip = function(dbId) {
+        const e = equipment.find(x => x.dbId === dbId);
+        if (!e) return;
+        
+        document.getElementById('equipmentEditTitle').textContent = '編輯器材資訊';
+        document.getElementById('editEquipDbId').value = e.dbId;
+        document.getElementById('editEquipName').value = e.name;
+        document.getElementById('editEquipPrice').value = e.price;
+        document.getElementById('editEquipQty').value = e.totalQty;
+        document.getElementById('editEquipDesc').value = e.description || '';
+        document.getElementById('editEquipImage').value = e.image || '';
+        document.getElementById('editEquipActive').checked = e.isActive !== false;
+        
+        if (equipmentEditModal) {
+            equipmentEditModal.style.display = 'flex';
+            equipmentEditModal.offsetHeight;
+            equipmentEditModal.classList.add('show');
+        }
+    };
+
+    window.deleteEquip = function(dbId) {
+        if (!confirm('確定要刪除此器材嗎？此動作無法復原。')) return;
+        if (db) {
+            db.collection("equipment").doc(dbId).delete().then(() => {
+                alert('器材已刪除');
+            });
+        } else {
+            equipment = equipment.filter(e => e.dbId !== dbId);
+            if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
+            alert('本地模式：器材已移除');
+        }
+    };
+
+    if (equipmentEditForm) {
+        equipmentEditForm.addEventListener('submit', (evt) => {
+            evt.preventDefault();
+            const dbId = document.getElementById('editEquipDbId').value;
+            const price = parseInt(document.getElementById('editEquipPrice').value, 10);
+            const qty = parseInt(document.getElementById('editEquipQty').value, 10);
+            
+            const newEquip = {
+                name: document.getElementById('editEquipName').value,
+                price: price,
+                totalQty: qty,
+                description: document.getElementById('editEquipDesc').value,
+                image: document.getElementById('editEquipImage').value,
+                isActive: document.getElementById('editEquipActive').checked,
+                order: equipment.length + 1
+            };
+
+            if (dbId && db) {
+                db.collection("equipment").doc(dbId).update(newEquip).then(() => {
+                    if (equipmentEditModal) {
+                        equipmentEditModal.classList.remove('show');
+                        setTimeout(() => equipmentEditModal.style.display = 'none', 300);
+                    }
+                    alert('器材資訊已更新');
+                });
+            } else if (db) {
+                db.collection("equipment").add(newEquip).then(() => {
+                    if (equipmentEditModal) {
+                        equipmentEditModal.classList.remove('show');
+                        setTimeout(() => equipmentEditModal.style.display = 'none', 300);
+                    }
+                    alert('新器材已新增');
+                });
+            } else {
+                alert('提示：目前處於離線模式，無法儲存至雲端。');
+            }
+        });
+    }
+
     window.renderAdminList = function () {
         if (bookings.length === 0) {
             adminList.innerHTML = '<div class="empty-state"><p>目前無待審核申請</p></div>';
@@ -745,9 +1078,19 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (b.status === '預約成功') {
                 actionHtml = `
                     <div class="admin-actions">
-                        <button class="btn-primary" style="background-color: var(--accent); color: black; font-weight: 500;" onclick="resendApprovalEmail('${b.id}')">補傳通知信</button>
+                        <button class="btn-primary" style="background-color: var(--accent); color: black;" onclick="resendApprovalEmail('${b.id}')">補傳通知信</button>
+                        <button class="btn-secondary" style="background-color: #334155; border-color: #475569;" onclick="printReceipt('${b.id}')">列印收據</button>
                     </div>
                 `;
+            }
+
+            let equipDisplay = '';
+            let equipStrList = [];
+            if (b.equipment && Array.isArray(b.equipment)) {
+                equipStrList = b.equipment.map(eq => typeof eq === 'string' ? eq : `${eq.name} (x${eq.qty})`);
+            }
+            if (equipStrList.length > 0) {
+                equipDisplay = `<p style="font-size: 0.85rem; color: var(--text-main); margin-top: 5px;">附加器材: ${equipStrList.join('、')}</p>`;
             }
 
             return `
@@ -759,6 +1102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             時段: ${dateDisplay} | 劇團: ${b.groupName} | 聯絡人: ${b.applicant} | Email: ${b.email}
                         </p>
                         <p style="font-size: 0.85rem; color: var(--text-main); margin-top: 5px;">目的: ${b.purpose}</p>
+                        ${equipDisplay}
+                        <p style="font-size: 0.85rem; color: var(--accent); margin-top: 5px; font-weight: bold;">總計租金: ${b.totalRent || '無'}</p>
                     </div>
                     ${actionHtml}
                     ${b.status !== '審核中' ? `<div class="status-badge ${b.status === '預約成功' ? 'status-approved' : 'status-rejected'}">${b.status}</div>` : ''}
@@ -771,6 +1116,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 如果有填寫金鑰，就進行真實的 API 寄信
         if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY.length > 5) {
             const venueName = venues.find(v => v.id === item.venue)?.name || item.venue;
+            
+            let equipStrList = [];
+            if (item.equipment && Array.isArray(item.equipment)) {
+                equipStrList = item.equipment.map(eq => typeof eq === 'string' ? eq : `${eq.name} (x${eq.qty})`);
+            }
+
             const templateParams = {
                 to_email: item.email,
                 applicant_name: item.applicant,
@@ -779,6 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 venue_name: venueName,
                 booking_date: item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`,
                 booking_slots: item.slots.join('、'),
+                booking_equipment: equipStrList.length > 0 ? equipStrList.join('、') : '無',
                 total_rent: item.totalRent || '無'
             };
 
@@ -828,25 +1180,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ============================================
-    // 後台：場地管理系統 (Tabs 與新增/編輯邏輯)
+    // 後台：場地管理系統 (新增/編輯邏輯)
     // ============================================
-
-    // 後台切換 Tabs 邏輯
-    document.querySelectorAll('.admin-tabs .tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.admin-tabs .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.admin-section .tab-content').forEach(c => c.style.display = 'none');
-            
-            const targetId = e.currentTarget.getAttribute('data-tab');
-            e.currentTarget.classList.add('active');
-            document.getElementById(targetId).style.display = 'block';
-            
-            if (targetId === 'venuesTab' && typeof window.renderAdminVenueList === 'function') {
-                window.renderAdminVenueList();
-            }
-        });
-    });
-
     // 渲染後台場地列表
     window.renderAdminVenueList = function() {
         const adminVenueList = document.getElementById('adminVenueList');
@@ -987,16 +1322,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const headers = ['案號', '申請時間', '狀態', '場地', '開始日期', '結束日期', '時段', '劇團名稱', '聯絡人', '電子郵件', '排練目的', '總計租金'];
+            const headers = ['案號', '申請時間', '狀態', '場地', '開始日期', '結束日期', '時段', '劇團名稱', '聯絡人', '電子郵件', '排練目的', '附加器材', '總計租金'];
 
             const rows = successfulBookings.map(b => {
                 const venueName = venues.find(v => v.id === b.venue)?.name || b.venue;
                 const slotStr = typeof b.slots === 'string' ? b.slots : (b.slots ? b.slots.join(';') : '');
+                
+                let equipStrList = [];
+                if (b.equipment && Array.isArray(b.equipment)) {
+                    equipStrList = b.equipment.map(eq => typeof eq === 'string' ? eq : `${eq.name} (x${eq.qty})`);
+                }
+                const equipStr = equipStrList.length > 0 ? equipStrList.join(';') : '無';
                 const rentVal = b.totalRent || '';
 
                 return [
                     b.id, b.timestamp, b.status, venueName, b.startDate, b.endDate, slotStr,
-                    b.groupName, b.applicant, b.email, b.purpose, rentVal
+                    b.groupName, b.applicant, b.email, b.purpose, equipStr, rentVal
                 ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
             });
 
@@ -1017,6 +1358,114 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(link);
         });
     }
+
+    // === 實體收據列印系統 ===
+    window.printReceipt = function(id) {
+        const item = bookings.find(b => b.id === id);
+        if (!item) return;
+
+        const v = venues.find(v => v.id === item.venue);
+        const venueName = v?.name || item.venue;
+
+        const d1 = new Date(item.startDate);
+        const d2 = new Date(item.endDate);
+        const days = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+        const totalSessions = days * item.slots.length;
+        
+        let venueRentHtml = '';
+        if (v && v.pricing) {
+            let sessionPrices = [];
+            item.slots.forEach(slot => {
+                if (slot.includes('早')) sessionPrices.push({ name: '早場', p: v.pricing.morning });
+                else if (slot.includes('午')) sessionPrices.push({ name: '午場', p: v.pricing.afternoon });
+                else if (slot.includes('晚')) sessionPrices.push({ name: '晚場', p: v.pricing.evening });
+            });
+            venueRentHtml = sessionPrices.map(sp => {
+                const subtotal = sp.p * days;
+                return `<tr>
+                    <td>場租: ${venueName} (${sp.name})</td>
+                    <td>NT$ ${sp.p.toLocaleString()} × ${days}天</td>
+                    <td style="text-align:right; font-weight:bold;">NT$ ${subtotal.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+        } else {
+            venueRentHtml = `<tr><td>場租: ${venueName}</td><td>(計價資訊遺失)</td><td style="text-align:right;">-</td></tr>`;
+        }
+
+        // 渲染器材明細
+        let equipItemsHtml = '';
+        if (item.equipment && Array.isArray(item.equipment) && item.equipment.length > 0) {
+            equipItemsHtml = item.equipment.map(eq => {
+                if (typeof eq === 'string') return `<tr><td>器材: ${eq}</td><td>-</td><td style="text-align:right;"> - </td></tr>`;
+                const subtotal = eq.price * eq.qty * totalSessions;
+                return `<tr>
+                    <td>器材: ${eq.name}</td>
+                    <td>NT$ ${eq.price.toLocaleString()} × ${eq.qty}件 × ${totalSessions}場次</td>
+                    <td style="text-align:right; font-weight:bold;">NT$ ${subtotal.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+        } else {
+            equipItemsHtml = `<tr><td colspan="3" style="color: #666; text-align:center;">無特殊附加器材</td></tr>`;
+        }
+
+        const dateStr = item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`;
+
+        const receiptHtml = `
+            <div id="printReceiptWrapper" class="receipt-wrapper">
+                <div class="receipt-header">
+                    <h2>傳統戲曲排練空間 - 租借結帳收據</h2>
+                    <p>案號：${item.id} | 日期：${item.timestamp.split(' ')[0]}</p>
+                </div>
+                <div class="receipt-section">
+                    <h3>申請人資訊</h3>
+                    <p><strong>申請單位：</strong>${item.groupName}</p>
+                    <p><strong>聯絡人：</strong>${item.applicant}</p>
+                    <p><strong>聯絡信箱：</strong>${item.email}</p>
+                    <p><strong>排練目的：</strong>${item.purpose}</p>
+                </div>
+                <div class="receipt-section">
+                    <h3>預約檔期</h3>
+                    <p><strong>預約日期：</strong>${dateStr} (共 ${days} 天)</p>
+                    <p><strong>預約時段：</strong>${item.slots.join('、')}</p>
+                </div>
+                <div class="receipt-section">
+                    <h3>費用計算明細</h3>
+                    <table class="receipt-table">
+                        <thead>
+                            <tr>
+                                <th>計費項目</th>
+                                <th>計算基礎 (單價 × 數量/天數)</th>
+                                <th style="text-align:right;">小計金額</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${venueRentHtml}
+                            ${equipItemsHtml}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="receipt-total">
+                    <h3>實收總計金額： <span class="amount">${item.totalRent || 'NT$ 0'}</span></h3>
+                </div>
+                <div class="receipt-signatures">
+                    <div class="sig-box">
+                        <p>經理人簽署 (Manager)</p>
+                        <div class="sig-line"></div>
+                    </div>
+                    <div class="sig-box">
+                        <p>團隊代表簽收 (Client)</p>
+                        <div class="sig-line"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        let existingWrapper = document.getElementById('printReceiptWrapper');
+        if (existingWrapper) existingWrapper.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', receiptHtml);
+        window.print();
+    };
 
     // --- 最終啟動指令 ---
     initCustomCalendar();

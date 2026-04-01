@@ -166,6 +166,13 @@
                             <label for="purpose">排練目的</label>
                             <textarea id="purpose" rows="4" placeholder="請簡述您的排練計畫..." required></textarea>
                         </div>
+                        <div class="form-group">
+                            <label>附加器材租借 (按時段計費)</label>
+                            <div id="bookingEquipmentContainer" class="equipment-selection-grid">
+                                <!-- 由 JS 動態生成項目 -->
+                            </div>
+                        </div>
+
                         <div class="btn-group">
                             <button type="button" class="btn-secondary prev-step">回上一步</button>
                             <button type="submit" class="btn-primary">提交申請</button>
@@ -181,7 +188,8 @@
                 <h2 class="section-title" style="margin-bottom: 0;">後台管理系統</h2>
                 <div class="admin-tabs" style="display: flex; gap: 15px;">
                     <button class="btn-primary tab-btn active" data-tab="approvalsTab" style="padding: 8px 20px;">審核列表</button>
-                    <button class="btn-secondary tab-btn" data-tab="venuesTab" style="padding: 8px 20px;">場地管理</button>
+                    <button class="btn-secondary tab-btn" data-tab="venuesTab" style="padding: 8px 10px;">場地管理</button>
+                    <button class="btn-secondary tab-btn" data-tab="equipmentTab" style="padding: 8px 10px;">器材管理</button>
                 </div>
             </div>
             
@@ -202,6 +210,16 @@
                 </div>
                 <div class="admin-list glass-card" id="adminVenueList">
                     <div class="empty-state"><p>載入場地資料中...</p></div>
+                </div>
+            </div>
+
+            <!-- 器材管理 Tab -->
+            <div id="equipmentTab" class="tab-content" style="display: none;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                    <button class="btn-primary" id="addEquipmentBtn" style="padding: 8px 16px; font-size: 0.9rem; background: var(--accent); color: #0f0b0a; font-weight: bold;">+ 新增器材</button>
+                </div>
+                <div class="admin-list glass-card" id="adminEquipmentList">
+                    <div class="empty-state"><p>載入器材資料中...</p></div>
                 </div>
             </div>
         </section>
@@ -303,6 +321,43 @@
     </div>
 
     <script src="app.js"></script>
+    <!-- 器材編輯 Modal -->
+    <div id="equipmentEditModal" class="modal">
+        <div class="modal-content glass-card" style="max-width: 500px;">
+            <span class="close-modal">&times;</span>
+            <h3 id="equipmentEditTitle" style="margin-bottom: 20px; font-family: var(--font-heading);">編輯器材資訊</h3>
+            <form id="equipmentEditForm">
+                <input type="hidden" id="editEquipDbId">
+                <div class="form-group">
+                    <label for="editEquipName">器材名稱</label>
+                    <input type="text" id="editEquipName" placeholder="如：京胡 (專業級)" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editEquipPrice">單時段租金 (NT$)</label>
+                        <input type="number" id="editEquipPrice" placeholder="單次場次價格" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEquipQty">庫存總量</label>
+                        <input type="number" id="editEquipQty" placeholder="數量" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editEquipDesc">器材說明</label>
+                    <textarea id="editEquipDesc" rows="3" placeholder="請輸入器材規格與介紹"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editEquipImage">器材圖片網址 (完整路徑或 assets/)</label>
+                    <input type="text" id="editEquipImage" placeholder="https://... 或 assets/image.png">
+                </div>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; display: flex;">
+                    <input type="checkbox" id="editEquipActive" style="width: auto; margin-bottom: 0;">
+                    <label for="editEquipActive" style="margin-bottom: 0; cursor: pointer;">是否開放租借 (上架中)</label>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">儲存並套用</button>
+            </form>
+        </div>
+    </div>
 </body>
 
 </html>
