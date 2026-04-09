@@ -1248,8 +1248,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (b.status === '預約成功') {
                 actionHtml = `
                     <div class="admin-actions">
-                        <button class="btn-primary" style="background-color: var(--accent); color: black;" onclick="resendApprovalEmail('${b.id}')">補傳通知信</button>
+                        <button class="btn-primary" style="background-color: var(--accent); color: black;" onclick="resendApprovalEmail('${b.id}')">補傳核准信</button>
                         <button class="btn-secondary" style="background-color: #334155; border-color: #475569;" onclick="printReceipt('${b.id}')">列印收據</button>
+                    </div>
+                `;
+            } else if (b.status === '預約退回') {
+                actionHtml = `
+                    <div class="admin-actions">
+                        <button class="btn-secondary" style="background-color: #334155; border-color: #475569;" onclick="resendRejectEmail('${b.id}')">補傳退回信</button>
                     </div>
                 `;
             }
@@ -1340,6 +1346,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = bookings.find(b => b.id === id);
         if (item) {
             sendEmail(item, true);
+        }
+    };
+
+    window.resendRejectEmail = function (id) {
+        const item = bookings.find(b => b.id === id);
+        if (item) {
+            sendEmail(item, true, true);
         }
     };
 
