@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const EMAILJS_PUBLIC_KEY = '2NlEiWtXcW05Awbjt'; // 替換為您的 Public Key
     const EMAILJS_SERVICE_ID = 'service_96agth6'; // 替換為您的 Service ID
-    const EMAILJS_TEMPLATE_ID = 'template_rle8t5f'; // 替換為您的 Template ID
+    const EMAILJS_TEMPLATE_ID = 'template_rle8t5f'; // 此為「核准/成功」的 Template ID
+    const EMAILJS_REJECT_TEMPLATE_ID = 'template_uz1rccd'; // 此為「拒絕退回」專用 Template ID
 
     // 初始化 EmailJS SDK
     if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY.length > 5) {
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 snapshot.forEach((doc) => {
                     venues.push({ dbId: doc.id, ...doc.data() });
                 });
-                
+
                 if (venues.length === 0) {
                     defaultVenues.forEach(v => db.collection("venues").add(v));
                 } else {
@@ -115,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 snapshot.forEach((doc) => {
                     equipment.push({ dbId: doc.id, ...doc.data() });
                 });
-                
+
                 if (equipment.length === 0) {
                     defaultEquipment.forEach(e => db.collection("equipment").add(e));
                 } else {
@@ -165,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
         venues = [...defaultVenues];
         equipment = [...defaultEquipment]; // 本地模式也載入器材
-        window.saveBookingsLocal = function() {
+        window.saveBookingsLocal = function () {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
         };
     }
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 動態渲染逐日時段選擇矩陣
-    window.renderDailySlotInputs = function() {
+    window.renderDailySlotInputs = function () {
         const venueId = document.getElementById('venueSelect').value;
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
@@ -282,35 +283,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         wrapper.style.display = 'block';
         const dates = getDatesInRange(startDate, endDate);
-        
+
         container.innerHTML = dates.map(date => {
             return `
             <div class="daily-slot-row" data-date="${date}">
                 <div class="daily-slot-date">${date.substring(5)}</div>
                 <div class="daily-slot-options">
                     ${['morning', 'afternoon', 'evening'].map(slotKey => {
-                        const currentVenue = venues.find(v => v.id === venueId);
-                        const timings = currentVenue?.timings || { morning: '09:00-13:00', afternoon: '14:00-18:00', evening: '19:00-23:00' };
-                        const labelMap = { 'morning': '早', 'afternoon': '午', 'evening': '晚' };
-                        const timeMap = { 'morning': timings.morning, 'afternoon': timings.afternoon, 'evening': timings.evening };
-                        
-                        // 檢查衝突
-                        const isOccupied = bookings.some(b => 
-                            b.status === '預約成功' && 
-                            b.venue === venueId && 
-                            (
-                                (b.dailySlots && b.dailySlots[date] && b.dailySlots[date].some(s => s.startsWith(labelMap[slotKey]))) ||
-                                (!b.dailySlots && date >= b.startDate && date <= b.endDate && b.slots.some(s => s.startsWith(labelMap[slotKey])))
-                            )
-                        );
+                const currentVenue = venues.find(v => v.id === venueId);
+                const timings = currentVenue?.timings || { morning: '09:00-13:00', afternoon: '14:00-18:00', evening: '19:00-23:00' };
+                const labelMap = { 'morning': '早', 'afternoon': '午', 'evening': '晚' };
+                const timeMap = { 'morning': timings.morning, 'afternoon': timings.afternoon, 'evening': timings.evening };
 
-                        return `
+                // 檢查衝突
+                const isOccupied = bookings.some(b =>
+                    b.status === '預約成功' &&
+                    b.venue === venueId &&
+                    (
+                        (b.dailySlots && b.dailySlots[date] && b.dailySlots[date].some(s => s.startsWith(labelMap[slotKey]))) ||
+                        (!b.dailySlots && date >= b.startDate && date <= b.endDate && b.slots.some(s => s.startsWith(labelMap[slotKey])))
+                    )
+                );
+
+                return `
                         <label class="slot-pill ${isOccupied ? 'disabled' : ''}">
                             <input type="checkbox" name="slots_${date}" value="${slotKey}" ${isOccupied ? 'disabled' : ''}>
                             <span>${labelMap[slotKey]} (${timeMap[slotKey]})</span>
                         </label>
                         `;
-                    }).join('')}
+            }).join('')}
                 </div>
             </div>
             `;
@@ -328,11 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 3. 初始化場地展示
-    window.renderVenues = function() {
+    window.renderVenues = function () {
         const activeVenues = venues.filter(v => v.isActive !== false);
         const venueGrid = document.getElementById('venueGrid');
         if (!venueGrid) return;
-        
+
         venueGrid.innerHTML = activeVenues.map(venue => {
             const displayPrice = venue.pricing ? `$${venue.pricing.morning} 起 / 時段` : venue.price;
             return `
@@ -359,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const venueSelect = document.getElementById('venueSelect');
         if (venueSelect) {
             const currentSelected = venueSelect.value;
-            venueSelect.innerHTML = '<option value="" disabled selected>請選擇您欲租借的排練場地</option>' + 
+            venueSelect.innerHTML = '<option value="" disabled selected>請選擇您欲租借的排練場地</option>' +
                 activeVenues.map(v => `<option value="${v.id}">${v.name} (${v.capacity})</option>`).join('');
             if (activeVenues.some(v => v.id === currentSelected)) venueSelect.value = currentSelected;
         }
@@ -384,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.name.includes('譜架')) return 'assets/music_stand.png';
         if (e.name.includes('譜燈')) return 'assets/stand_light.png';
         if (e.name.includes('白色長桌') || e.name.includes('長桌')) return 'assets/white_table.png';
-        
+
         const defaultMatch = defaultEquipment.find(d => d.name === e.name);
         return defaultMatch ? defaultMatch.image : 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=200&q=80';
     }
@@ -392,20 +393,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- [核心演算法] 計算指定器材在特定日期時段組合中的最大併發借用量，從而得出剩餘可用庫存 ---
     function getAvailableEquipQty(equip, dailySlots) {
         if (!dailySlots || Object.keys(dailySlots).length === 0) return equip.totalQty;
-        
+
         let maxBorrowedAtAnySlot = 0;
 
         // 我們必須遍歷使用者選中的「每一個」日期的「每一格」時段
         for (const date in dailySlots) {
             const slots = dailySlots[date];
-            
+
             slots.forEach(slotName => {
                 let currentSlotBorrowed = 0;
-                
+
                 // 檢查所有已成功的預約單
                 bookings.forEach(b => {
                     if (b.status !== '預約成功' && b.status !== '審核中') return;
-                    
+
                     // 檢查該筆預約單是否包含這一格時段
                     let bHasThisSlot = false;
                     if (b.dailySlots && b.dailySlots[date] && b.dailySlots[date].some(s => s.startsWith(slotName))) {
@@ -416,8 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (bHasThisSlot) {
                         // 找該訂單內是否有這項器材
-                        const used = (b.equipment && Array.isArray(b.equipment)) 
-                            ? b.equipment.find(eq => eq.dbId === equip.dbId || eq.name === equip.name) 
+                        const used = (b.equipment && Array.isArray(b.equipment))
+                            ? b.equipment.find(eq => eq.dbId === equip.dbId || eq.name === equip.name)
                             : null;
                         if (used) currentSlotBorrowed += (parseInt(used.qty) || 0);
                     }
@@ -432,10 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.max(0, equip.totalQty - maxBorrowedAtAnySlot);
     }
 
-    window.renderBookingEquipment = function() {
+    window.renderBookingEquipment = function () {
         const container = document.getElementById('bookingEquipmentContainer');
         if (!container) return;
-        
+
         const activeEquip = equipment.filter(e => e.isActive !== false);
         if (activeEquip.length === 0) {
             container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">目前無可用附加器材。</p>';
@@ -453,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = activeEquip.map(e => {
             const availQty = getAvailableEquipQty(e, dailySlots);
             const imgUrl = getEquipImage(e);
-            
+
             return `
             <div class="equip-item-advanced">
                 <div class="equip-img" style="background-image: url('${imgUrl}');"></div>
@@ -484,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const nextBtn = document.querySelector('.next-step');
                 if (nextBtn) {
-                   updateTotalRentPreview();
+                    updateTotalRentPreview();
                 }
             });
         });
@@ -495,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const venueVal = document.getElementById('venueSelect').value;
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
-        
+
         if (!venueVal || !startDate || !endDate) return;
 
         const dailySlots = {};
@@ -508,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasAnySlot = true;
             }
         });
-        
+
         if (!hasAnySlot) {
             const totalRentDisplay = document.getElementById('totalRentDisplay');
             if (totalRentDisplay) totalRentDisplay.textContent = `NT$ 0`;
@@ -523,31 +524,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedEquipments.push({ id: input.getAttribute('data-id'), qty: qty });
             }
         });
-        
+
         const totalRent = calculateTotalRent(venueVal, startDate, endDate, dailySlots, selectedEquipments);
         const totalRentDisplay = document.getElementById('totalRentDisplay');
         if (totalRentDisplay) {
             totalRentDisplay.textContent = `NT$ ${totalRent.toLocaleString()}`;
         }
     }
-    
+
     // 開啟「場地詳情 Modal」公用函式
-    window.openVenueModal = function(id) {
+    window.openVenueModal = function (id) {
         const v = venues.find(x => x.id === id);
         if (!v) return;
         document.getElementById('venueModalName').textContent = v.name;
         document.getElementById('venueModalTags').textContent = (v.tags || []).join(' | ');
         document.getElementById('venueModalDesc').textContent = v.desc || '暫無說明。';
         document.getElementById('venueModalImage').style.backgroundImage = `url('${v.image}')`;
-        
+
         document.getElementById('venueModalPriceM').textContent = v.pricing ? v.pricing.morning.toLocaleString() : 'N/A';
         document.getElementById('venueModalPriceA').textContent = v.pricing ? v.pricing.afternoon.toLocaleString() : 'N/A';
         document.getElementById('venueModalPriceE').textContent = v.pricing ? v.pricing.evening.toLocaleString() : 'N/A';
-        
+
         document.getElementById('venueModalTimeM').textContent = `早時段 (${v.timings ? v.timings.morning : '09:00-13:00'})`;
         document.getElementById('venueModalTimeA').textContent = `午時段 (${v.timings ? v.timings.afternoon : '14:00-18:00'})`;
         document.getElementById('venueModalTimeE').textContent = `晚時段 (${v.timings ? v.timings.evening : '19:00-23:00'})`;
-        
+
         document.getElementById('bookVenueNowBtn').onclick = () => {
             document.getElementById('venueDetailsModal').classList.remove('show');
             setTimeout(() => {
@@ -556,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.hash = 'booking';
             }, 300);
         };
-        
+
         const modal = document.getElementById('venueDetailsModal');
         modal.style.display = 'flex';
         modal.offsetHeight;
@@ -693,11 +694,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (qty > 0) {
                 const item = equipment.find(e => e.dbId === input.getAttribute('data-id'));
                 if (item) {
-                    selectedEquipments.push({ 
-                        id: item.dbId, 
-                        name: item.name, 
-                        qty: qty, 
-                        price: item.price 
+                    selectedEquipments.push({
+                        id: item.dbId,
+                        name: item.name,
+                        qty: qty,
+                        price: item.price
                     });
                 }
             }
@@ -725,11 +726,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert('申請已成功提交！將由 Email 通知您後續審核結果。');
         bookingForm.reset();
-        
+
         // 隱藏時段矩陣並重置 UI
         document.getElementById('dailySlotsWrapper').style.display = 'none';
         document.getElementById('dailySlotsGrid').innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">請先選擇預約日期...</p>';
-        
+
         steps[1].classList.remove('active');
         steps[0].classList.add('active');
         window.location.hash = 'schedule';
@@ -757,11 +758,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const daysContainer = document.getElementById('calendarDays');
         const monthYearLabel = document.getElementById('calendarMonthYear');
         const inputs = [
-            document.getElementById('startDate'), 
+            document.getElementById('startDate'),
             document.getElementById('endDate'),
             document.getElementById('scheduleDate')
         ].filter(Boolean);
-        
+
         let currentActiveInput = null;
         let displayedDate = new Date();
 
@@ -799,12 +800,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentActiveInput.value = dateStr;
                         picker.style.display = 'none';
                         currentActiveInput.dispatchEvent(new Event('change'));
-                        
+
                         // 若變更的是開始或結束日期，則重繪時段矩陣
                         if (currentActiveInput.id === 'startDate' || currentActiveInput.id === 'endDate') {
                             window.renderDailySlotInputs();
                         }
-                        
+
                         e.stopPropagation();
                     }
                 });
@@ -817,21 +818,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentActiveInput = input;
                 const rect = input.getBoundingClientRect();
                 picker.style.display = 'block';
-                
+
                 // 強大定位：使用 fixed 避免 scrollY 計算誤差，並支援 mobile 彈性置中
                 picker.style.position = 'fixed';
                 let topPos = rect.bottom + 10;
                 let leftPos = rect.left;
 
                 if (topPos + 350 > window.innerHeight) {
-                    topPos = rect.top - 360; 
+                    topPos = rect.top - 360;
                 }
                 if (window.innerWidth < 450) {
                     leftPos = (window.innerWidth - 320) / 2;
                 } else if (leftPos + 320 > window.innerWidth) {
                     leftPos = window.innerWidth - 340;
                 }
-                
+
                 picker.style.top = `${Math.max(10, topPos)}px`;
                 picker.style.left = `${Math.max(10, leftPos)}px`;
                 picker.style.zIndex = '9999';
@@ -844,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('click', handleOpen);
             input.addEventListener('touchstart', (e) => {
                 handleOpen(e);
-            }, {passive: false});
+            }, { passive: false });
         });
 
         document.getElementById('prevMonth')?.addEventListener('click', (e) => {
@@ -913,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const overlappingBookings = bookings.filter(b => {
                     if (b.venue !== venueId) return false;
-                    
+
                     if (b.dailySlots) {
                         // 新機制：精確檢查該日期是否存在該時段
                         return b.dailySlots[dayStr] && b.dailySlots[dayStr].some(s => s.startsWith(slot.id));
@@ -946,7 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 9.1 渲染後台「器材管理」清單
-    window.renderAdminEquipmentList = function() {
+    window.renderAdminEquipmentList = function () {
         const container = document.getElementById('adminEquipmentList');
         if (!container) return;
 
@@ -1101,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     adminTabs.forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-tab');
-            
+
             adminTabs.forEach(b => {
                 b.classList.remove('active', 'btn-primary');
                 b.classList.add('btn-secondary');
@@ -1133,7 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editEquipDesc').value = '';
             document.getElementById('editEquipImage').value = '';
             document.getElementById('editEquipActive').checked = true;
-            
+
             if (equipmentEditModal) {
                 equipmentEditModal.style.display = 'flex';
                 equipmentEditModal.offsetHeight;
@@ -1142,10 +1143,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.editEquip = function(dbId) {
+    window.editEquip = function (dbId) {
         const e = equipment.find(x => x.dbId === dbId);
         if (!e) return;
-        
+
         document.getElementById('equipmentEditTitle').textContent = '編輯器材資訊';
         document.getElementById('editEquipDbId').value = e.dbId;
         document.getElementById('editEquipName').value = e.name;
@@ -1154,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEquipDesc').value = e.description || '';
         document.getElementById('editEquipImage').value = e.image || '';
         document.getElementById('editEquipActive').checked = e.isActive !== false;
-        
+
         if (equipmentEditModal) {
             equipmentEditModal.style.display = 'flex';
             equipmentEditModal.offsetHeight;
@@ -1162,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.deleteEquip = function(dbId) {
+    window.deleteEquip = function (dbId) {
         if (!confirm('確定要刪除此器材嗎？此動作無法復原。')) return;
         if (db) {
             db.collection("equipment").doc(dbId).delete().then(() => {
@@ -1181,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dbId = document.getElementById('editEquipDbId').value;
             const price = parseInt(document.getElementById('editEquipPrice').value, 10);
             const qty = parseInt(document.getElementById('editEquipQty').value, 10);
-            
+
             const newEquip = {
                 name: document.getElementById('editEquipName').value,
                 price: price,
@@ -1223,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminList.innerHTML = bookings.map(b => {
             const venueName = venues.find(v => v.id === b.venue)?.name || '未知場地';
             const dateDisplay = b.startDate === b.endDate ? b.startDate : `${b.startDate} 至 ${b.endDate}`;
-            
+
             // 處理時段顯示 (優先顯示 dailySlots 明細)
             let slotDisplay = '';
             if (b.dailySlots) {
@@ -1285,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 如果有填寫金鑰，就進行真實的 API 寄信
         if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY.length > 5) {
             const venueName = venues.find(v => v.id === item.venue)?.name || item.venue;
-            
+
             let slotStr = '';
             if (item.dailySlots) {
                 const dayDetails = [];
@@ -1315,7 +1316,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: isReject ? '退回' : '核准'
             };
 
-            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+            const targetTemplate = isReject && EMAILJS_REJECT_TEMPLATE_ID ? EMAILJS_REJECT_TEMPLATE_ID : EMAILJS_TEMPLATE_ID;
+
+            emailjs.send(EMAILJS_SERVICE_ID, targetTemplate, templateParams)
                 .then(() => {
                     const statusStr = isReject ? '退回' : '核准';
                     const prefix = isResend ? '【補寄發信成功】' : '【真實發信成功】';
@@ -1344,8 +1347,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = bookings.find(b => b.id === id);
         if (item) {
             // 本地先修改狀態以供 EmailJS 抓取
-            item.status = '預約成功'; 
-            
+            item.status = '預約成功';
+
             // 同步狀態至雲端資料庫
             updateBookingStatusToDB(id, '預約成功');
 
@@ -1367,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 後台：場地管理系統 (新增/編輯邏輯)
     // ============================================
     // 渲染後台場地列表
-    window.renderAdminVenueList = function() {
+    window.renderAdminVenueList = function () {
         const adminVenueList = document.getElementById('adminVenueList');
         if (!adminVenueList) return;
 
@@ -1408,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             venueEditForm.reset();
             document.getElementById('editVenueDbId').value = '';
             document.getElementById('editVenueActive').checked = true;
-            
+
             venueEditModal.style.display = 'flex';
             venueEditModal.offsetHeight; // trigger reflow
             venueEditModal.classList.add('show');
@@ -1439,11 +1442,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const pm = parseInt(document.getElementById('editVenuePriceM').value, 10);
             const pa = parseInt(document.getElementById('editVenuePriceA').value, 10);
             const pe = parseInt(document.getElementById('editVenuePriceE').value, 10);
-            
+
             const tm = document.getElementById('editVenueTimeM').value || '09:00-13:00';
             const ta = document.getElementById('editVenueTimeA').value || '14:00-18:00';
             const te = document.getElementById('editVenueTimeE').value || '19:00-23:00';
-            
+
             const newVenue = {
                 id: document.getElementById('editVenueAlias').value,
                 name: document.getElementById('editVenueName').value,
@@ -1478,10 +1481,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.editVenue = function(dbId) {
+    window.editVenue = function (dbId) {
         const v = venues.find(x => x.dbId === dbId);
         if (!v) return;
-        
+
         document.getElementById('venueEditTitle').textContent = '編輯場地資訊';
         document.getElementById('editVenueDbId').value = v.dbId;
         document.getElementById('editVenueAlias').value = v.id;
@@ -1494,13 +1497,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editVenuePriceM').value = v.pricing ? v.pricing.morning : 0;
         document.getElementById('editVenuePriceA').value = v.pricing ? v.pricing.afternoon : 0;
         document.getElementById('editVenuePriceE').value = v.pricing ? v.pricing.evening : 0;
-        
+
         document.getElementById('editVenueTimeM').value = v.timings ? v.timings.morning : '09:00-13:00';
         document.getElementById('editVenueTimeA').value = v.timings ? v.timings.afternoon : '14:00-18:00';
         document.getElementById('editVenueTimeE').value = v.timings ? v.timings.evening : '19:00-23:00';
-        
+
         document.getElementById('editVenueActive').checked = v.isActive !== false;
-        
+
         venueEditModal.style.display = 'flex';
         venueEditModal.offsetHeight;
         venueEditModal.classList.add('show');
@@ -1520,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rows = successfulBookings.map(b => {
                 const venueName = venues.find(v => v.id === b.venue)?.name || b.venue;
-                
+
                 let slotStr = '';
                 if (b.dailySlots) {
                     const dayDetails = [];
@@ -1531,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     slotStr = typeof b.slots === 'string' ? b.slots : (b.slots ? b.slots.join(';') : '');
                 }
-                
+
                 let equipStrList = [];
                 if (b.equipment && Array.isArray(b.equipment)) {
                     equipStrList = b.equipment.map(eq => typeof eq === 'string' ? eq : `${eq.name} (x${eq.qty})`);
@@ -1564,7 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === 實體收據列印系統 ===
-    window.printReceipt = function(id) {
+    window.printReceipt = function (id) {
         const item = bookings.find(b => b.id === id);
         if (!item) return;
 
@@ -1574,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 計算總場次與各類場次天數 (依據 dailySlots)
         let morningDays = 0, afternoonDays = 0, eveningDays = 0;
         let totalSessionsCount = 0;
-        
+
         if (item.dailySlots) {
             for (const date in item.dailySlots) {
                 item.dailySlots[date].forEach(s => {
@@ -1598,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        
+
         let venueRentHtml = '';
         if (v && v.pricing) {
             const rows = [];
@@ -1680,7 +1683,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let existingWrapper = document.getElementById('printReceiptWrapper');
         if (existingWrapper) existingWrapper.remove();
-        
+
         document.body.insertAdjacentHTML('beforeend', receiptHtml);
         window.print();
     };
