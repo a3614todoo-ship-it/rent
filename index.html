@@ -116,21 +116,11 @@
                                 <span class="calendar-icon">📅</span>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label>選擇場次 (可複選)</label>
-                            <div class="slot-container">
-                                <label class="slot-pill">
-                                    <input type="checkbox" name="slots" value="morning">
-                                    <span>早 (09:00-13:00)</span>
-                                </label>
-                                <label class="slot-pill">
-                                    <input type="checkbox" name="slots" value="afternoon">
-                                    <span>午 (14:00-18:00)</span>
-                                </label>
-                                <label class="slot-pill">
-                                    <input type="checkbox" name="slots" value="evening">
-                                    <span>晚 (19:00-23:00)</span>
-                                </label>
+                        <div class="form-group" id="dailySlotsWrapper" style="display: none;">
+                            <label>選擇場次 (可按日複選)</label>
+                            <div id="dailySlotsGrid" class="daily-slots-matrix">
+                                <!-- 由 JS 依照日期區間動態生成 -->
+                                <p style="color: var(--text-muted); font-size: 0.9rem;">請先選擇預約日期...</p>
                             </div>
                         </div>
                         <button type="button" class="btn-primary next-step">下一階段</button>
@@ -273,9 +263,9 @@
                 <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
                     <strong style="color: #fff; font-size: 1.05rem; display: block; margin-bottom: 10px;">時段專屬定價 (NT$)</strong>
                     <ul style="list-style: none; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
-                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">早場 (08-12)<br><span id="venueModalPriceM" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
-                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">午場 (13-17)<br><span id="venueModalPriceA" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
-                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">晚場 (18-22)<br><span id="venueModalPriceE" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><div id="venueModalTimeM" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:4px;">早時段</div><span id="venueModalPriceM" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><div id="venueModalTimeA" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:4px;">午時段</div><span id="venueModalPriceA" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
+                        <li style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;"><div id="venueModalTimeE" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:4px;">晚時段</div><span id="venueModalPriceE" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;"></span></li>
                     </ul>
                 </div>
                 <button type="button" class="btn-primary" id="bookVenueNowBtn" style="width: 100%; font-size: 1.1rem; padding: 12px;">選擇此場地並前往預約</button>
@@ -303,11 +293,18 @@
                 <div class="form-group"><label>詳細介紹文案</label><textarea id="editVenueDesc" rows="4" required></textarea></div>
                 
                 <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
-                    <h4 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-main);">各時段獨立定價 (NT$)</h4>
+                    <h4 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-main);">各時段獨立定價 (NT$) 與 時間範圍</h4>
                     <div class="form-row">
-                        <div class="form-group"><label>早場 (08:00-12:00)</label><input type="number" id="editVenuePriceM" required></div>
-                        <div class="form-group"><label>午場 (13:00-17:00)</label><input type="number" id="editVenuePriceA" required></div>
-                        <div class="form-group"><label>晚場 (18:00-22:00)</label><input type="number" id="editVenuePriceE" required></div>
+                        <div class="form-group"><label>早時段定價</label><input type="number" id="editVenuePriceM" required></div>
+                        <div class="form-group"><label>早時段時間</label><input type="text" id="editVenueTimeM" required placeholder="如: 09:00-13:00"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>午時段定價</label><input type="number" id="editVenuePriceA" required></div>
+                        <div class="form-group"><label>午時段時間</label><input type="text" id="editVenueTimeA" required placeholder="如: 14:00-18:00"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>晚時段定價</label><input type="number" id="editVenuePriceE" required></div>
+                        <div class="form-group"><label>晚時段時間</label><input type="text" id="editVenueTimeE" required placeholder="如: 19:00-23:00"></div>
                     </div>
                 </div>
                 
