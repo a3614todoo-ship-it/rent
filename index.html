@@ -25,6 +25,7 @@
         <ul class="nav-links">
             <li><a href="#home" class="active">首頁</a></li>
             <li><a href="#venues">場地瀏覽</a></li>
+            <li><a href="#pricing">費用總覽</a></li>
             <li><a href="#schedule">檔期查詢</a></li>
             <li><a href="#booking">預約申請</a></li>
         </ul>
@@ -54,6 +55,49 @@
             <h2 class="section-title">精選場地</h2>
             <div class="venue-grid" id="venueGrid">
                 <!-- 場地卡片將由 JS 動態生成 -->
+            </div>
+        </section>
+
+        <section id="pricing" class="pricing-section" style="padding: 100px 5%; max-width: 1200px; margin: 0 auto;">
+            <h2 class="section-title">費用總覽</h2>
+            
+            <div style="margin-bottom: 40px;">
+                <h3 style="color: var(--accent); margin-bottom: 20px; font-size: 1.5rem; text-align: center;">場地租借費用</h3>
+                <div class="table-responsive glass-card">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>場地名稱</th>
+                                <th>適合對象 / 容量</th>
+                                <th>早時段定價</th>
+                                <th>午時段定價</th>
+                                <th>晚時段定價</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pricingVenueTbody">
+                            <!-- JS 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="color: var(--accent); margin-bottom: 20px; font-size: 1.5rem; text-align: center;">附加器材清單</h3>
+                <div class="table-responsive glass-card">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>器材名稱</th>
+                                <th>說明</th>
+                                <th>單場次費用</th>
+                                <th>最高可借數量</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pricingEquipTbody">
+                            <!-- JS 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 

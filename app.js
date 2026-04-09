@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     defaultVenues.forEach(v => db.collection("venues").add(v));
                 } else {
                     if (typeof window.renderVenues === 'function') window.renderVenues();
+                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                     const adminPanel = document.getElementById('adminPanel');
                     if (adminPanel && adminPanel.style.display === 'block') {
                         if (window.renderAdminVenueList) window.renderAdminVenueList();
@@ -121,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     defaultEquipment.forEach(e => db.collection("equipment").add(e));
                 } else {
                     if (typeof window.renderBookingEquipment === 'function') window.renderBookingEquipment();
+                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                     const adminPanel = document.getElementById('adminPanel');
                     if (adminPanel && adminPanel.style.display === 'block') {
                         if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
@@ -326,6 +328,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTotalRentPreview();
             });
         });
+    };
+
+    // 3.0 渲染首頁總覽費用表
+    window.renderPricingTables = function () {
+        const venueTbody = document.getElementById('pricingVenueTbody');
+        const equipTbody = document.getElementById('pricingEquipTbody');
+        
+        if (venueTbody) {
+            const activeVenues = venues.filter(v => v.isActive !== false);
+            venueTbody.innerHTML = activeVenues.map(v => {
+                const tm = v.timings ? v.timings.morning : '09:00-13:00';
+                const ta = v.timings ? v.timings.afternoon : '14:00-18:00';
+                const te = v.timings ? v.timings.evening : '19:00-23:00';
+                return `
+                <tr>
+                    <td style="font-weight: bold; color: var(--text-main); white-space: nowrap;">${v.name}</td>
+                    <td>${v.type} <br><span style="font-size:0.85rem; color:var(--text-muted);">${v.capacity}</span></td>
+                    <td style="white-space: nowrap;"><span style="display:block; color:var(--accent); font-weight:bold;">$${v.pricing?.morning.toLocaleString() || 'N/A'}</span><span style="font-size:0.8rem; color:var(--text-muted);">${tm}</span></td>
+                    <td style="white-space: nowrap;"><span style="display:block; color:var(--accent); font-weight:bold;">$${v.pricing?.afternoon.toLocaleString() || 'N/A'}</span><span style="font-size:0.8rem; color:var(--text-muted);">${ta}</span></td>
+                    <td style="white-space: nowrap;"><span style="display:block; color:var(--accent); font-weight:bold;">$${v.pricing?.evening.toLocaleString() || 'N/A'}</span><span style="font-size:0.8rem; color:var(--text-muted);">${te}</span></td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        if (equipTbody) {
+            const activeEquip = equipment.filter(e => e.isActive !== false);
+            equipTbody.innerHTML = activeEquip.map(e => `
+                <tr>
+                    <td style="font-weight: bold; color: var(--text-main); white-space: nowrap;">${e.name}</td>
+                    <td style="color: var(--text-muted); font-size: 0.95rem;">${e.description}</td>
+                    <td style="color: var(--accent); font-weight: bold; white-space: nowrap;">$${e.price.toLocaleString()}</td>
+                    <td style="white-space: nowrap;">${e.totalQty} 組</td>
+                </tr>
+            `).join('');
+        }
     };
 
     // 3. 初始化場地展示
@@ -1200,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => equipmentEditModal.style.display = 'none', 300);
                     }
                     alert('器材資訊已更新');
+                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                 });
             } else if (db) {
                 db.collection("equipment").add(newEquip).then(() => {
@@ -1208,6 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => equipmentEditModal.style.display = 'none', 300);
                     }
                     alert('新器材已新增');
+                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                 });
             } else {
                 alert('提示：目前處於離線模式，無法儲存至雲端。');
@@ -1479,6 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     venueEditModal.classList.remove('show');
                     setTimeout(() => venueEditModal.style.display = 'none', 300);
                     alert('場地已更新！前台畫面將自動同步。');
+                    if (window.renderPricingTables) window.renderPricingTables();
                 });
             } else if (db) {
                 // Add
@@ -1487,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     venueEditModal.classList.remove('show');
                     setTimeout(() => venueEditModal.style.display = 'none', 300);
                     alert('場地已新增！前台畫面將自動同步。');
+                    if (window.renderPricingTables) window.renderPricingTables();
                 });
             } else {
                 alert('提示：目前處於本機離線模式，未填入 Firebase 金鑰，因此無法儲存變更設定。');
