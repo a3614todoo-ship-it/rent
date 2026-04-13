@@ -1316,8 +1316,22 @@ document.addEventListener('DOMContentLoaded', () => {
             adminList.innerHTML = '<div class="empty-state"><p>目前無待審核申請</p></div>';
             return;
         }
+        const parseTWDateStr = (str) => {
+            if (!str) return 0;
+            const match = str.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午)?\s*(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+            if (match) {
+                let [_, y, m, d, ampm, h, min, sec] = match;
+                h = parseInt(h, 10);
+                if (ampm === '下午' && h < 12) h += 12;
+                if (ampm === '上午' && h === 12) h = 0;
+                return new Date(y, m-1, d, h, min, sec).getTime();
+            }
+            return new Date(str.replace('上午', ' AM').replace('下午', ' PM')).getTime() || 0;
+        };
 
-        adminList.innerHTML = bookings.map(b => {
+        const sortedBookings = [...bookings].sort((a, b) => parseTWDateStr(b.timestamp) - parseTWDateStr(a.timestamp));
+
+        adminList.innerHTML = sortedBookings.map(b => {
             const venueName = venues.find(v => v.id === b.venue)?.name || '未知場地';
             const dateDisplay = b.startDate === b.endDate ? b.startDate : `${b.startDate} 至 ${b.endDate}`;
 
