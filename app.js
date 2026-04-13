@@ -1325,9 +1325,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let slotDisplay = '';
             if (b.dailySlots) {
                 const dayDetails = [];
-                for (const date in b.dailySlots) {
-                    dayDetails.push(`${date.substring(5)}(${b.dailySlots[date].join(',')})`);
-                }
+                Object.keys(b.dailySlots).sort().forEach(date => {
+                    dayDetails.push(`${date.substring(5)}(${b.dailySlots[date].join('/')})`);
+                });
                 slotDisplay = dayDetails.join(' | ');
             } else {
                 slotDisplay = typeof b.slots === 'string' ? b.slots : (b.slots && b.slots.length > 0 ? b.slots.join('、') : '');
@@ -1392,9 +1392,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let slotStr = '';
             if (item.dailySlots) {
                 const dayDetails = [];
-                for (const date in item.dailySlots) {
+                Object.keys(item.dailySlots).sort().forEach(date => {
                     dayDetails.push(`${date.substring(5)}(${item.dailySlots[date].join('/')})`);
-                }
+                });
                 slotStr = dayDetails.join(' | ');
             } else {
                 slotStr = item.slots.join('、');
@@ -1655,9 +1655,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 let slotStr = '';
                 if (b.dailySlots) {
                     const dayDetails = [];
-                    for (const date in b.dailySlots) {
+                    Object.keys(b.dailySlots).sort().forEach(date => {
                         dayDetails.push(`${date}(${b.dailySlots[date].join('/')})`);
-                    }
+                    });
                     slotStr = dayDetails.join('; ');
                 } else {
                     slotStr = typeof b.slots === 'string' ? b.slots : (b.slots ? b.slots.join(';') : '');
@@ -1764,9 +1764,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (item.dailySlots) {
             displayDays = Object.keys(item.dailySlots).length;
             const slotDetails = [];
-            for (const date in item.dailySlots) {
+            Object.keys(item.dailySlots).sort().forEach(date => {
                 slotDetails.push(`${date.substring(5)}(${item.dailySlots[date].join('/')})`);
-            }
+            });
             displaySlots = slotDetails.join(' | ');
         } else {
             const d1 = new Date(item.startDate);
