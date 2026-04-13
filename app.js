@@ -1437,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             emailjs.send(EMAILJS_SERVICE_ID, targetTemplate, templateParams)
                 .then(() => {
                     const statusStr = isReject ? '退回' : '核准';
-                    const prefix = isResend ? '【補寄發信成功】' : '【真實發信成功】';
+                    const prefix = isResend ? '【補寄發信成功】' : '【發信成功】';
                     alert(`${prefix}${statusStr}通知已送至申請人信箱：${item.email}`);
                 })
                 .catch((err) => {
