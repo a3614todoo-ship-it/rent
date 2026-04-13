@@ -1378,7 +1378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p style="font-size: 0.85rem; color: var(--accent); margin-top: 5px; font-weight: bold;">總計租金: ${b.totalRent || '無'}</p>
                     </div>
                     ${actionHtml}
-                    ${b.status !== '審核中' ? `<div class="status-badge ${b.status === '預約成功' ? 'status-approved' : 'status-rejected'}">${b.status}</div>` : ''}
+                    ${b.status !== '審核中' ? `<div style="font-size: 0.9rem; font-weight: bold; white-space: nowrap; margin-left: 10px; color: ${b.status === '預約成功' ? 'var(--accent)' : 'var(--danger)'};">${b.status}</div>` : ''}
                 </div>
             `;
         }).join('');
