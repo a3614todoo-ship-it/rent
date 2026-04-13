@@ -100,14 +100,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (venues.length === 0) {
-                    defaultVenues.forEach(v => db.collection("venues").add(v));
-                } else {
-                    if (typeof window.renderVenues === 'function') window.renderVenues();
-                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
-                    const adminPanel = document.getElementById('adminPanel');
-                    if (adminPanel && adminPanel.style.display === 'block') {
-                        if (window.renderAdminVenueList) window.renderAdminVenueList();
-                    }
+                    // 若資料庫為空，僅載入至記憶體變數，取消自動 add() 避免 Github Pages 重新啟動時因為 snapshot 空窗期造成重複
+                    venues = [...defaultVenues];
+                }
+                
+                if (typeof window.renderVenues === 'function') window.renderVenues();
+                if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
+                const adminPanel = document.getElementById('adminPanel');
+                if (adminPanel && adminPanel.style.display === 'block') {
+                    if (window.renderAdminVenueList) window.renderAdminVenueList();
                 }
             }, (err) => console.log("Firebase Venues Offline:", err));
 
@@ -119,14 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (equipment.length === 0) {
-                    defaultEquipment.forEach(e => db.collection("equipment").add(e));
-                } else {
-                    if (typeof window.renderBookingEquipment === 'function') window.renderBookingEquipment();
-                    if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
-                    const adminPanel = document.getElementById('adminPanel');
-                    if (adminPanel && adminPanel.style.display === 'block') {
-                        if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
-                    }
+                    // 同理，僅賦值以供渲染
+                    equipment = [...defaultEquipment];
+                }
+                
+                if (typeof window.renderBookingEquipment === 'function') window.renderBookingEquipment();
+                if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
+                const adminPanel = document.getElementById('adminPanel');
+                if (adminPanel && adminPanel.style.display === 'block') {
+                    if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
                 }
             }, (err) => console.log("Firebase Equipment Offline:", err));
 
@@ -1497,8 +1499,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             | 價格: 早 ${v.pricing?.morning}/午 ${v.pricing?.afternoon}/晚 ${v.pricing?.evening}
                         </p>
                     </div>
+                    </div>
                 </div>
-                <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 8px 20px; font-size: 0.95rem;">編輯</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem;">編輯</button>
+                    ${v.dbId ? `<button class="btn-secondary" onclick="deleteVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem; background: rgba(255,0,0,0.1); color: var(--danger); border-color: var(--danger);">刪除</button>` : ''}
+                </div>
             </div>
         `).join('');
     };
@@ -1616,6 +1622,20 @@ document.addEventListener('DOMContentLoaded', () => {
         venueEditModal.style.display = 'flex';
         venueEditModal.offsetHeight;
         venueEditModal.classList.add('show');
+    };
+
+    window.deleteVenue = function(dbId) {
+        if (!confirm('確認要永久刪除此場地資料嗎？此操作無法還原，且前台也會同步撤下。')) return;
+        if (db && dbId) {
+            db.collection("venues").doc(dbId).delete().then(() => {
+                alert('場地已成功刪除！');
+                if (window.renderPricingTables) window.renderPricingTables();
+            }).catch((err) => {
+                alert('刪除失敗：' + err.message);
+            });
+        } else {
+            alert('無法刪除，可能是離線的預設資料或金鑰未設定。');
+        }
     };
 
     // CSV 報表導出功能
