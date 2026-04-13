@@ -1325,9 +1325,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let slotDisplay = '';
             if (b.dailySlots) {
                 const dayDetails = [];
-                Object.keys(b.dailySlots).sort().forEach(date => {
+                for (const date in b.dailySlots) {
                     dayDetails.push(`${date.substring(5)}(${b.dailySlots[date].join('/')})`);
-                });
+                }
                 slotDisplay = dayDetails.join(' | ');
             } else {
                 slotDisplay = typeof b.slots === 'string' ? b.slots : (b.slots && b.slots.length > 0 ? b.slots.join('、') : '');
