@@ -1499,9 +1499,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             | 價格: 早 ${v.pricing?.morning}/午 ${v.pricing?.afternoon}/晚 ${v.pricing?.evening}
                         </p>
                     </div>
-                    </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
                     <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem;">編輯</button>
                     ${v.dbId ? `<button class="btn-secondary" onclick="deleteVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem; background: rgba(255,0,0,0.1); color: var(--danger); border-color: var(--danger);">刪除</button>` : ''}
                 </div>
