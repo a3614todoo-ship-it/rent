@@ -1759,6 +1759,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dateStr = item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`;
 
+        let displayDays = 0;
+        let displaySlots = '';
+        if (item.dailySlots) {
+            displayDays = Object.keys(item.dailySlots).length;
+            const slotDetails = [];
+            for (const date in item.dailySlots) {
+                slotDetails.push(`${date.substring(5)}(${item.dailySlots[date].join('/')})`);
+            }
+            displaySlots = slotDetails.join(' | ');
+        } else {
+            const d1 = new Date(item.startDate);
+            const d2 = new Date(item.endDate);
+            displayDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            displaySlots = item.slots ? item.slots.join('、') : '';
+        }
+
         const receiptHtml = `
             <div id="printReceiptWrapper" class="receipt-wrapper">
                 <div class="receipt-header">
@@ -1774,8 +1790,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="receipt-section">
                     <h3>預約檔期</h3>
-                    <p><strong>預約日期：</strong>${dateStr} (共 ${days} 天)</p>
-                    <p><strong>預約時段：</strong>${item.slots.join('、')}</p>
+                    <p><strong>預約日期：</strong>${dateStr} (共 ${displayDays} 天)</p>
+                    <p><strong>預約時段：</strong>${displaySlots}</p>
                 </div>
                 <div class="receipt-section">
                     <h3>費用計算明細</h3>
