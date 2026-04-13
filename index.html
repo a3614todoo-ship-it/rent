@@ -224,6 +224,7 @@
                     <button class="btn-primary tab-btn active" data-tab="approvalsTab" style="padding: 8px 20px;">審核列表</button>
                     <button class="btn-secondary tab-btn" data-tab="venuesTab" style="padding: 8px 10px;">場地管理</button>
                     <button class="btn-secondary tab-btn" data-tab="equipmentTab" style="padding: 8px 10px;">器材管理</button>
+                    <button class="btn-secondary tab-btn" data-tab="inventoryTab" style="padding: 8px 10px;">庫存報表</button>
                 </div>
             </div>
             
@@ -254,6 +255,30 @@
                 </div>
                 <div class="admin-list glass-card" id="adminEquipmentList">
                     <div class="empty-state"><p>載入器材資料中...</p></div>
+                </div>
+            </div>
+
+            <!-- 庫存報表 Tab -->
+            <div id="inventoryTab" class="tab-content" style="display: none;">
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                    <label for="inventoryDate" style="font-weight: bold; color: var(--text-main);">查詢基準日：</label>
+                    <input type="date" id="inventoryDate" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                </div>
+                <div class="table-responsive glass-card">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left;">器材名稱</th>
+                                <th>早時段剩餘</th>
+                                <th>午時段剩餘</th>
+                                <th>晚時段剩餘</th>
+                                <th>總數量上限</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryReportTBody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請選擇日期以載入庫存...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>

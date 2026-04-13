@@ -798,7 +798,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const inputs = [
             document.getElementById('startDate'),
             document.getElementById('endDate'),
-            document.getElementById('scheduleDate')
+            document.getElementById('scheduleDate'),
+            document.getElementById('inventoryDate')
         ].filter(Boolean);
 
         let currentActiveInput = null;
@@ -1016,6 +1017,41 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     };
 
+    // 9.2 渲染後台「庫存現量報表」
+    window.renderInventoryReport = function (dateString) {
+        const tbody = document.getElementById('inventoryReportTBody');
+        if (!tbody) return;
+
+        if (!dateString) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請選擇有效日期</td></tr>';
+            return;
+        }
+
+        const activeEquip = equipment.filter(e => e.isActive !== false);
+        if (activeEquip.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">目前無器材資料</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = activeEquip.map(e => {
+            const m = getAvailableEquipQty(e, { [dateString]: ['早'] });
+            const a = getAvailableEquipQty(e, { [dateString]: ['午'] });
+            const ev = getAvailableEquipQty(e, { [dateString]: ['晚'] });
+
+            const highlightAlert = (avail) => avail === 0 ? '<span style="color:var(--danger);font-weight:bold;">0</span>' : avail;
+
+            return `
+            <tr>
+                <td style="font-weight: bold; color: var(--text-main); text-align: left;">${e.name}</td>
+                <td>${highlightAlert(m)}</td>
+                <td>${highlightAlert(a)}</td>
+                <td>${highlightAlert(ev)}</td>
+                <td style="color: var(--text-muted);">${e.totalQty}</td>
+            </tr>
+            `;
+        }).join('');
+    };
+
     scheduleVenueSelect.addEventListener('change', window.renderSchedule);
     scheduleDateInput.addEventListener('change', window.renderSchedule);
 
@@ -1023,6 +1059,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomCalendar();
     renderVenues();
     if (window.renderSchedule) window.renderSchedule();
+    
+    // 預設今日日期為 inventoryDate
+    const invDateInput = document.getElementById('inventoryDate');
+    if (invDateInput) {
+        const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        invDateInput.value = todayStr;
+        invDateInput.addEventListener('change', (e) => {
+            if (window.renderInventoryReport) window.renderInventoryReport(e.target.value);
+        });
+    }
 
     // --- 管理員登入與後台邏輯 ---
     const loginBtn = document.getElementById('loginBtn');
@@ -1149,8 +1195,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('btn-secondary');
 
             tabContents.forEach(content => {
-                content.style.display = content.id === target ? 'block' : 'none';
+                content.style.display = (content.id === target) ? 'block' : 'none';
             });
+
+            // 當切換到庫存報表時，觸發渲染更新
+            if (target === 'inventoryTab') {
+                const dateVal = document.getElementById('inventoryDate')?.value;
+                if (window.renderInventoryReport && dateVal) {
+                    window.renderInventoryReport(dateVal);
+                }
+            }
 
             if (target === 'equipmentTab' && typeof window.renderAdminEquipmentList === 'function') window.renderAdminEquipmentList();
             if (target === 'venuesTab' && typeof window.renderAdminVenueList === 'function') window.renderAdminVenueList();
