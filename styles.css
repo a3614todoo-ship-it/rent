@@ -970,19 +970,16 @@ section.visible {
 }
 
 @media print {
-    body * { visibility: hidden; }
+    body > *:not(#printReceiptWrapper) { display: none !important; }
     body {
         background: #fff !important;
         color: #000 !important;
         margin: 0 !important;
         padding: 0 !important;
     }
-    #printReceiptWrapper, #printReceiptWrapper * { visibility: visible; }
     #printReceiptWrapper {
         display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
+        position: relative !important;
         width: 100%;
         padding: 40px;
         box-sizing: border-box;
