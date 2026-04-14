@@ -11,6 +11,43 @@
     --border: rgba(219, 179, 89, 0.2);
     --font-main: 'Inter', sans-serif;
     --font-heading: 'Outfit', sans-serif;
+    
+    /* 深色預設結構色 */
+    --glass-bg: rgba(15, 23, 42, 0.8);
+    --glass-card-bg: rgba(255, 255, 255, 0.03);
+    --glass-border-light: rgba(255, 255, 255, 0.05);
+    --input-bg: rgba(0, 0, 0, 0.2);
+    --modal-bg: rgba(15, 23, 42, 0.95);
+    --admin-bg: rgba(30, 41, 59, 0.9);
+    --glass-border: rgba(219, 179, 89, 0.2);
+    --hero-overlay: rgba(15, 11, 10, 0.4);
+    --hero-grad-end: #0f0b0a;
+    --hero-radial-bg: radial-gradient(circle at center, rgba(15, 11, 10, 0.1) 0%, rgba(15, 11, 10, 0.7) 100%);
+    --hero-bg-image: var(--hero-bg-image-dark, url('assets/opera_hero_bg.png'));
+}
+
+:root[data-theme="light"] {
+    --bg-main: #FDFCF8;
+    --bg-secondary: #F3EFE9;
+    --accent: #B08D3E;
+    --accent-hover: #987834;
+    --accent-red: #A3262A;
+    --text-main: #2C211D;
+    --text-muted: #6B5B53;
+    --border: rgba(176, 141, 62, 0.3);
+
+    /* 淺色結構色 */
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-card-bg: #FFFFFF;
+    --glass-border-light: rgba(0, 0, 0, 0.08);
+    --input-bg: #FFFFFF;
+    --modal-bg: rgba(253, 252, 248, 0.98);
+    --admin-bg: rgba(243, 239, 233, 0.95);
+    --glass-border: rgba(176, 141, 62, 0.45);
+    --hero-overlay: rgba(253, 252, 248, 0.2);
+    --hero-grad-end: #FDFCF8;
+    --hero-radial-bg: radial-gradient(circle at center, rgba(253, 252, 248, 0.1) 0%, rgba(243, 239, 233, 0.6) 100%);
+    --hero-bg-image: var(--hero-bg-image-light, url('assets/opera_hero_light.png'));
 }
 
 * {
@@ -25,6 +62,7 @@ body {
     font-family: var(--font-main);
     line-height: 1.6;
     overflow-x: hidden;
+    transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 /* --- Layout --- */
@@ -56,7 +94,7 @@ section.visible {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.8);
+    background: var(--glass-bg);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--glass-border);
     z-index: 1000;
@@ -98,18 +136,17 @@ section.visible {
     align-items: center;
     position: relative;
     overflow: hidden;
-    /* 調整遮罩透明度 (從 0.65 降至 0.4)，並加入混合模式讓底圖更有質感 */
-    background: linear-gradient(to bottom, rgba(15, 11, 10, 0.4), #0f0b0a),
-                url('opera_hero_bg.png') center/cover no-repeat;
+    background: linear-gradient(to bottom, var(--hero-overlay), var(--hero-grad-end)),
+                var(--hero-bg-image) center/cover no-repeat;
     background-blend-mode: overlay;
+    transition: background-image 0.5s ease-in-out;
 }
 
 .hero::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    /* 調整徑向遮罩：中心更透明 (0% -> 0.1), 邊緣稍淡 (0.8 -> 0.7) */
-    background: radial-gradient(circle at center, rgba(15, 11, 10, 0.1) 0%, rgba(15, 11, 10, 0.7) 100%);
+    background: var(--hero-radial-bg);
     pointer-events: none;
 }
 
@@ -234,14 +271,14 @@ section.visible {
 
 /* --- Booking Form --- */
 .glass-card {
-    background: rgba(15, 11, 10, 0.4);
+    background: var(--glass-card-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border);
+    border: 1px solid var(--glass-border);
     border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.4s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.4s ease, background-color 0.4s ease;
 }
 
 .glass-card:hover {
@@ -271,19 +308,20 @@ section.visible {
 
 .form-group input, .form-group select, .form-group textarea {
     width: 100%;
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--input-bg);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     padding: 12px 16px;
     color: var(--text-main);
     font-family: var(--font-main);
     outline: none;
-    transition: border-color 0.3s;
+    transition: all 0.3s;
 }
 
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
     border-color: var(--accent);
+    background: var(--bg-main);
     box-shadow: 0 0 0 3px rgba(219, 179, 89, 0.15);
 }
 
@@ -562,15 +600,20 @@ section.visible {
 }
 
 .admin-item {
+    background: var(--glass-card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
 }
 
-.admin-item:last-child {
-    border-bottom: none;
+.admin-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 15px rgba(219, 179, 89, 0.1);
 }
 
 .admin-actions {
@@ -844,7 +887,7 @@ section.visible {
 .equip-item-advanced {
     display: flex;
     flex-direction: column;
-    background: rgba(15, 23, 42, 0.4);
+    background: var(--glass-card-bg);
     border: 1px solid var(--glass-border);
     border-radius: 10px;
     overflow: hidden;
@@ -1059,15 +1102,15 @@ section.visible {
     align-items: center;
     gap: 15px;
     padding: 10px 15px;
-    background: rgba(15, 23, 42, 0.3);
+    background: var(--glass-card-bg);
     border-radius: 10px;
-    border: 1px solid transparent;
+    border: 1px solid var(--glass-border);
     transition: all 0.3s;
 }
 
 .daily-slot-row:hover {
-    background: rgba(219, 179, 89, 0.05);
-    border-color: rgba(219, 179, 89, 0.2);
+    background: var(--glass-card-bg);
+    border-color: var(--accent);
 }
 
 .daily-slot-date {
@@ -1086,7 +1129,7 @@ section.visible {
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--input-bg);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     cursor: pointer;
@@ -1098,7 +1141,7 @@ section.visible {
 
 .slot-pill:hover:not(.disabled) {
     border-color: var(--accent);
-    background: rgba(219, 179, 89, 0.1);
+    background: var(--glass-card-bg);
     color: var(--text-main);
 }
 
@@ -1123,7 +1166,7 @@ section.visible {
 .slot-pill.disabled {
     opacity: 0.3;
     cursor: not-allowed;
-    background: #111;
+    background: var(--bg-secondary);
     border-style: dashed;
 }
 
