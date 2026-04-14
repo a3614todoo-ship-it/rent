@@ -144,6 +144,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.renderAdminList) window.renderAdminList();
                 }
             }, (error) => console.log("Firebase Bookings Offline:", error));
+
+            // 【新增】系統設定監聽 (用於預設主題等)
+            db.collection("settings").doc("system").onSnapshot((doc) => {
+                if (doc.exists) {
+                    const sysData = doc.data();
+                    
+                    // 動態載入背景圖片設定
+                    if (sysData.heroImageDark) {
+                        document.documentElement.style.setProperty('--hero-bg-image-dark', `url('${sysData.heroImageDark}')`);
+                        const el = document.getElementById('heroImageDark');
+                        if (el) el.value = sysData.heroImageDark;
+                    }
+                    if (sysData.heroImageLight) {
+                        document.documentElement.style.setProperty('--hero-bg-image-light', `url('${sysData.heroImageLight}')`);
+                        const el = document.getElementById('heroImageLight');
+                        if (el) el.value = sysData.heroImageLight;
+                    }
+
+                    // 如果用戶本地沒有手動切換過主題，則跟隨系統預設
+                    if (!localStorage.getItem('userTheme')) {
+                        applyTheme(sysData.defaultTheme || 'dark');
+                    }
+                    // 更新後台設定面板的選中狀態
+                    const radios = document.getElementsByName('defaultTheme');
+                    radios.forEach(r => {
+                        if (r.value === (sysData.defaultTheme || 'dark')) r.checked = true;
+                    });
+                }
+            });
         } else {
             throw new Error("Firebase not identified");
         }
@@ -173,6 +202,61 @@ document.addEventListener('DOMContentLoaded', () => {
         window.saveBookingsLocal = function () {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
         };
+    }
+
+    // ==========================================
+    // 2. 主題管理與系統配置 (Theme Management)
+    // ==========================================
+    const themeToggle = document.getElementById('themeToggle');
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (themeToggle) {
+            themeToggle.innerText = theme === 'light' ? '☀️' : '🌙';
+        }
+    }
+
+    // 初始載入主題
+    const savedTheme = localStorage.getItem('userTheme');
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } // 如果無存檔，則由 Firebase settings snapshot 處理 (見上方)
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('userTheme', newTheme);
+        });
+    }
+
+    // 後台儲存系統設定
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            if (!db) {
+                alert('離線模式無法儲存系統設定');
+                return;
+            }
+            const selectedTheme = document.querySelector('input[name="defaultTheme"]:checked').value;
+            const heroDark = document.getElementById('heroImageDark').value.trim() || 'assets/opera_hero_bg.png';
+            const heroLight = document.getElementById('heroImageLight').value.trim() || 'assets/opera_hero_light.png';
+
+            db.collection("settings").doc("system").set({
+                defaultTheme: selectedTheme,
+                heroImageDark: heroDark,
+                heroImageLight: heroLight,
+                updatedAt: new Date().toLocaleString('zh-TW')
+            }, { merge: true }).then(() => {
+                // 儲存的同時直接渲染畫面
+                document.documentElement.style.setProperty('--hero-bg-image-dark', `url('${heroDark}')`);
+                document.documentElement.style.setProperty('--hero-bg-image-light', `url('${heroLight}')`);
+                alert('系統配置已成功儲存至雲端並套用');
+            }).catch(err => {
+                console.error("儲存設定失敗:", err);
+                alert('儲存失敗');
+            });
+        });
     }
 
     // 封裝通用庫存寫入函式 (供送出表單呼叫)
@@ -1012,8 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="admin-actions">
-                    <button class="btn-success" onclick="editEquip('${e.dbId}')" style="background: rgba(219, 179, 89, 0.2); border-color: var(--accent); color: var(--accent);">編輯專屬</button>
-                    <button class="btn-danger" onclick="deleteEquip('${e.dbId}')">刪除</button>
+                    <button class="btn-secondary" onclick="editEquip('${e.dbId}')" style="padding: 6px 12px; font-size: 0.85rem;">編輯</button>
+                    <button class="btn-secondary" onclick="deleteEquip('${e.dbId}')" style="padding: 6px 12px; font-size: 0.85rem; background: rgba(163, 38, 42, 0.1); color: var(--accent-red); border-color: var(--accent-red);">刪除</button>
                 </div>
             </div>
         `).join('');
@@ -1358,14 +1442,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (b.status === '預約成功') {
                 actionHtml = `
                     <div class="admin-actions">
-                        <button class="btn-primary" style="background-color: var(--accent); color: black; white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="resendApprovalEmail('${b.id}')">補傳核准信</button>
-                        <button class="btn-secondary" style="background-color: #334155; border-color: #475569; white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="printReceipt('${b.id}')">列印收據</button>
+                        <button class="btn-primary" style="white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="resendApprovalEmail('${b.id}')">補傳核准信</button>
+                        <button class="btn-secondary" style="white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="printReceipt('${b.id}')">列印收據</button>
                     </div>
                 `;
             } else if (b.status === '預約退回') {
                 actionHtml = `
                     <div class="admin-actions">
-                        <button class="btn-secondary" style="background-color: #334155; border-color: #475569; white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="resendRejectEmail('${b.id}')">補傳退回信</button>
+                        <button class="btn-secondary" style="white-space: nowrap; padding: 6px 12px; font-size: 0.85rem;" onclick="resendRejectEmail('${b.id}')">補傳退回信</button>
                     </div>
                 `;
             }
@@ -1515,8 +1599,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem;">編輯</button>
-                    ${v.dbId ? `<button class="btn-secondary" onclick="deleteVenue('${v.dbId}')" style="padding: 8px 15px; font-size: 0.95rem; background: rgba(255,0,0,0.1); color: var(--danger); border-color: var(--danger);">刪除</button>` : ''}
+                    <button class="btn-secondary" onclick="editVenue('${v.dbId}')" style="padding: 6px 12px; font-size: 0.85rem;">編輯</button>
+                    ${v.dbId ? `<button class="btn-secondary" onclick="deleteVenue('${v.dbId}')" style="padding: 6px 12px; font-size: 0.85rem; background: rgba(163, 38, 42, 0.1); color: var(--accent-red); border-color: var(--accent-red);">刪除</button>` : ''}
                 </div>
             </div>
         `).join('');

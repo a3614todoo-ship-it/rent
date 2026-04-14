@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 
-<body class="dark-theme">
+<body>
     <nav class="glass-header">
         <div class="logo">藝境<span>空間</span></div>
         <ul class="nav-links">
@@ -30,9 +30,12 @@
             <li><a href="#booking">預約申請</a></li>
         </ul>
 
-        <button class="btn-primary" id="loginBtn">管理者登入</button>
-        <button class="btn-primary" id="adminSystemBtn" style="display: none;">後台系統</button>
-        <button class="btn-secondary" id="logoutBtn" style="display: none;">登出</button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-secondary" id="themeToggle" style="padding: 10px; line-height: 1; min-width: 45px;">🌙</button>
+            <button class="btn-primary" id="loginBtn">管理者登入</button>
+            <button class="btn-primary" id="adminSystemBtn" style="display: none;">後台系統</button>
+            <button class="btn-secondary" id="logoutBtn" style="display: none;">登出</button>
+        </div>
     </nav>
 
     <main>
@@ -225,6 +228,7 @@
                     <button class="btn-secondary tab-btn" data-tab="venuesTab" style="padding: 8px 10px;">場地管理</button>
                     <button class="btn-secondary tab-btn" data-tab="equipmentTab" style="padding: 8px 10px;">器材管理</button>
                     <button class="btn-secondary tab-btn" data-tab="inventoryTab" style="padding: 8px 10px;">庫存報表</button>
+                    <button class="btn-secondary tab-btn" data-tab="settingsTab" style="padding: 8px 10px;">系統設定</button>
                 </div>
             </div>
             
@@ -279,6 +283,43 @@
                             <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請選擇日期以載入庫存...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- 系統設定 Tab -->
+            <div id="settingsTab" class="tab-content" style="display: none;">
+                <div class="admin-list glass-card" style="padding: 30px;">
+                    <h3 style="margin-bottom: 20px; color: var(--accent);">全站系統配置</h3>
+                    <div class="form-group" style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">預設網站主題色系</label>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">此設定將決定新訪客進入網站時看到的初始配色。訪客仍可手動切換。</p>
+                        <div style="display: flex; gap: 20px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="defaultTheme" value="dark" checked> 
+                                <span>深色模式 (預設)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="defaultTheme" value="light"> 
+                                <span>淺色樣式</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">首頁主視覺背景設定</label>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">根據使用者切換不同的色系，將動態平滑切換為下方的圖片網址或相對路徑。</p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-size: 0.85rem;">深色模式主圖 URL / 路徑：</label>
+                            <input type="text" id="heroImageDark" value="assets/opera_hero_bg.png" placeholder="例如: assets/opera_hero_bg.png" style="margin-top: 5px;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.85rem;">淺色模式主圖 URL / 路徑：</label>
+                            <input type="text" id="heroImageLight" value="assets/opera_hero_light.png" placeholder="例如: assets/opera_hero_light.png" style="margin-top: 5px;">
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="saveSettingsBtn" style="padding: 10px 30px;">儲存系統設定</button>
                 </div>
             </div>
         </section>
