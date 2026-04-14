@@ -171,10 +171,11 @@ section.visible {
 
 .hero-content p {
     font-size: 1.25rem;
-    color: var(--text-muted);
+    color: var(--text-main);
     max-width: 700px;
     line-height: 1.8;
     margin-bottom: 40px;
+    font-weight: 500;
 }
 
 .hero-btns {
