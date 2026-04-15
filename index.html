@@ -28,6 +28,7 @@
             <li><a href="#pricing">費用總覽</a></li>
             <li><a href="#schedule">檔期查詢</a></li>
             <li><a href="#booking">預約申請</a></li>
+            <li><a href="#contact">聯絡我們</a></li>
         </ul>
 
         <div style="display: flex; gap: 10px; align-items: center;">
@@ -219,6 +220,31 @@
             </div>
         </section>
 
+        <!-- 聯絡我們 -->
+        <section id="contact" class="contact-section" style="padding: 100px 5%; max-width: 1200px; margin: 0 auto;">
+            <h2 class="section-title">聯絡我們</h2>
+            <div class="glass-card" style="padding: 40px; text-align: center; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+                <div>
+                    <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 1.2rem;">排練基地地址</h3>
+                    <p id="displayContactAddress" style="font-size: 1.1rem; line-height: 1.6;">尚未設定地址</p>
+                </div>
+                <div>
+                    <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 1.2rem;">聯絡與預約專線</h3>
+                    <p id="displayContactPhone" style="font-size: 1.1rem; line-height: 1.6;">尚未設定電話</p>
+                </div>
+                <div style="margin-top: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    <p>如需專人帶看場地，請提前來電預約。</p>
+                </div>
+                <div id="contactMapContainer" style="margin-top: 20px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); display: none;">
+                    <iframe id="displayContactMap" src="" width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+                <div id="contactGuideContainer" style="margin-top: 20px; text-align: left; display: none; padding: 20px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                    <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 1.2rem;">交通指南</h3>
+                    <p id="displayContactGuide" style="color: var(--text-main); font-size: 1rem; line-height: 1.8; white-space: pre-wrap;"></p>
+                </div>
+            </div>
+        </section>
+
         <!-- 後台管理系統 -->
         <section id="adminPanel" class="admin-section" style="display: none;">
             <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -319,6 +345,32 @@
                             <input type="text" id="heroImageLight" value="assets/opera_hero_light.png" placeholder="例如: assets/opera_hero_light.png" style="margin-top: 5px;">
                         </div>
                     </div>
+
+                    <div class="form-group" style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid var(--border);">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">聯絡方式設定</label>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">此資訊將顯示於前台「聯絡我們」區塊。</p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-size: 0.85rem;">聯絡地址：</label>
+                            <input type="text" id="settingContactAddress" placeholder="例如: 台北市中正區中山南路21-1號 (國家戲劇院)" style="margin-top: 5px;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.85rem;">聯絡電話：</label>
+                            <input type="text" id="settingContactPhone" placeholder="例如: (02) 2343-1100" style="margin-top: 5px;">
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <label style="font-size: 0.85rem;">Google Maps 分享網址 (src)：</label>
+                            <input type="text" id="settingContactMap" placeholder="請只貼上嵌入地圖 iframe 內的 src 網址連結" style="margin-top: 5px;">
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <label style="font-size: 0.85rem;">交通指南說明：</label>
+                            <textarea id="settingContactGuide" rows="4" placeholder="例如: 捷運中正紀念堂站 5 號出口步行 3 分鐘..."></textarea>
+                        </div>
+                    </div>
+
                     <button class="btn-primary" id="saveSettingsBtn" style="padding: 10px 30px;">儲存系統設定</button>
                 </div>
             </div>

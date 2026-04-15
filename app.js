@@ -162,6 +162,49 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (el) el.value = sysData.heroImageLight;
                     }
 
+                    // 動態載入聯絡資訊
+                    if (sysData.contactAddress) {
+                        const el1 = document.getElementById('displayContactAddress');
+                        if (el1) el1.innerText = sysData.contactAddress;
+                        const el2 = document.getElementById('settingContactAddress');
+                        if (el2) el2.value = sysData.contactAddress;
+                    }
+                    if (sysData.contactPhone) {
+                        const el1 = document.getElementById('displayContactPhone');
+                        if (el1) el1.innerText = sysData.contactPhone;
+                        const el2 = document.getElementById('settingContactPhone');
+                        if (el2) el2.value = sysData.contactPhone;
+                    }
+
+                    // 動態載入地圖與交通指南
+                    if (sysData.contactMap) {
+                        const el1 = document.getElementById('displayContactMap');
+                        const container = document.getElementById('contactMapContainer');
+                        if (el1 && container) {
+                            el1.src = sysData.contactMap;
+                            container.style.display = 'block';
+                        }
+                        const el2 = document.getElementById('settingContactMap');
+                        if (el2) el2.value = sysData.contactMap;
+                    } else {
+                        const container = document.getElementById('contactMapContainer');
+                        if (container) container.style.display = 'none';
+                    }
+
+                    if (sysData.contactGuide) {
+                        const el1 = document.getElementById('displayContactGuide');
+                        const container = document.getElementById('contactGuideContainer');
+                        if (el1 && container) {
+                            el1.innerText = sysData.contactGuide;
+                            container.style.display = 'block';
+                        }
+                        const el2 = document.getElementById('settingContactGuide');
+                        if (el2) el2.value = sysData.contactGuide;
+                    } else {
+                        const container = document.getElementById('contactGuideContainer');
+                        if (container) container.style.display = 'none';
+                    }
+
                     // 如果用戶本地沒有手動切換過主題，則跟隨系統預設
                     if (!localStorage.getItem('userTheme')) {
                         applyTheme(sysData.defaultTheme || 'dark');
@@ -241,11 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedTheme = document.querySelector('input[name="defaultTheme"]:checked').value;
             const heroDark = document.getElementById('heroImageDark').value.trim() || 'assets/opera_hero_bg.png';
             const heroLight = document.getElementById('heroImageLight').value.trim() || 'assets/opera_hero_light.png';
+            const contactAddr = document.getElementById('settingContactAddress') ? document.getElementById('settingContactAddress').value.trim() : '';
+            const contactPh = document.getElementById('settingContactPhone') ? document.getElementById('settingContactPhone').value.trim() : '';
+            const contactMap = document.getElementById('settingContactMap') ? document.getElementById('settingContactMap').value.trim() : '';
+            const contactGuide = document.getElementById('settingContactGuide') ? document.getElementById('settingContactGuide').value.trim() : '';
 
             db.collection("settings").doc("system").set({
                 defaultTheme: selectedTheme,
                 heroImageDark: heroDark,
                 heroImageLight: heroLight,
+                contactAddress: contactAddr,
+                contactPhone: contactPh,
+                contactMap: contactMap,
+                contactGuide: contactGuide,
                 updatedAt: new Date().toLocaleString('zh-TW')
             }, { merge: true }).then(() => {
                 // 儲存的同時直接渲染畫面
