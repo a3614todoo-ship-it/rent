@@ -85,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let db = null;
     let bookings = [];
+    let events = [];
+    let eventRegistrations = [];
 
     // 【容錯優化】將初始化包裹在 try-catch 中，避免本地檔案瀏覽時因安全限制導致腳本崩潰
     try {
@@ -144,6 +146,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.renderAdminList) window.renderAdminList();
                 }
             }, (error) => console.log("Firebase Bookings Offline:", error));
+
+            // 【新增】活動監聽
+            db.collection("events").orderBy("date", "asc").onSnapshot((snapshot) => {
+                events = [];
+                snapshot.forEach((doc) => {
+                    events.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // 如果 Firebase 中還沒有活動，自動產出一筆測試活動供預覽
+                if (events.length === 0) {
+                    events = [{
+                        id: 'EV-TEST-01',
+                        name: '【大師開講】京劇武行身段解析與排演應用',
+                        date: '2026-05-20',
+                        time: '14:00-16:30',
+                        location: '梨園實驗劇場',
+                        capacity: 50,
+                        image: 'assets/event_lecture_test.png',
+                        description: '邀請資深京劇大師親自示範，帶領新生代演員從基礎的手眼身法步，進階至實際舞臺調度上的應用轉換。課程將包含實地體驗與QA問答環節，名額有限，歡迎熱愛傳統戲曲的朋友踴躍報名！',
+                        isActive: true
+                    }];
+                }
+
+                if (window.renderEventPreview) window.renderEventPreview();
+                const adminPanel = document.getElementById('adminPanel');
+                if (adminPanel && adminPanel.style.display === 'block') {
+                    if (window.renderAdminEventsList) window.renderAdminEventsList();
+                    if (window.updateCheckinSelect) window.updateCheckinSelect();
+                }
+            }, (error) => console.log("Firebase Events Offline:", error));
+
+            // 【新增】活動報名監聽
+            db.collection("event_registrations").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                eventRegistrations = [];
+                snapshot.forEach((doc) => {
+                    eventRegistrations.push({ id: doc.id, ...doc.data() });
+                });
+                const adminPanel = document.getElementById('adminPanel');
+                if (adminPanel && adminPanel.style.display === 'block') {
+                    if (window.renderCheckinList) window.renderCheckinList();
+                }
+            }, (error) => console.log("Firebase Event Reg Offline:", error));
 
             // 【新增】系統設定監聽 (用於預設主題等)
             db.collection("settings").doc("system").onSnapshot((doc) => {
@@ -242,6 +286,20 @@ document.addEventListener('DOMContentLoaded', () => {
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
         venues = [...defaultVenues];
         equipment = [...defaultEquipment]; // 本地模式也載入器材
+        
+        // 賦予本地測試活動
+        events = [{
+            id: 'EV-TEST-01',
+            name: '【大師開講】京劇武行身段解析與排演應用',
+            date: '2026-05-20',
+            time: '14:00-16:30',
+            location: '梨園實驗劇場',
+            capacity: 50,
+            image: 'assets/event_lecture_test.png',
+            description: '邀請資深京劇大師親自示範，帶領新生代演員從基礎的手眼身法步，進階至實際舞臺調度上的應用轉換。課程將包含實地體驗與 QA 問答環節，名額有限，歡迎熱愛傳統戲曲的朋友踴躍報名！',
+            isActive: true
+        }];
+
         window.saveBookingsLocal = function () {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
         };
@@ -1345,6 +1403,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (target === 'equipmentTab' && typeof window.renderAdminEquipmentList === 'function') window.renderAdminEquipmentList();
             if (target === 'venuesTab' && typeof window.renderAdminVenueList === 'function') window.renderAdminVenueList();
+            if (target === 'eventsManageTab' && typeof window.renderAdminEventsList === 'function') window.renderAdminEventsList();
+            if (target === 'checkinTab') {
+                if (typeof window.updateCheckinSelect === 'function') window.updateCheckinSelect();
+                if (typeof window.renderCheckinList === 'function') window.renderCheckinList();
+            }
         });
     });
 
@@ -1981,8 +2044,237 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     };
 
+    // ============================================
+    // 前台：首頁活動預覽區
+    // ============================================
+    window.renderEventPreview = function() {
+        const previewGrid = document.getElementById('eventPreviewGrid');
+        if (!previewGrid) return;
+        const activeEvents = events.filter(e => e.isActive !== false);
+        if (activeEvents.length === 0) {
+            previewGrid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1; text-align: center;"><p>近期暫無開放的活動</p></div>';
+            return;
+        }
+        previewGrid.innerHTML = activeEvents.map(e => {
+            const regCount = eventRegistrations.filter(r => r.eventId === e.id).length;
+            const fullStatus = regCount >= (parseInt(e.capacity)||0) ? '<span style="color:#ef4444; font-size:0.85rem;">[已額滿]</span>' : '';
+            return `
+            <div class="venue-card" style="display:flex; flex-direction:column; background:var(--glass-card-bg);">
+                <div class="venue-img" style="background-image: url('${e.image || 'assets/opera_hero_bg.png'}'); height: 200px; background-size: cover; background-position: center;"></div>
+                <div class="venue-info" style="flex: 1; display:flex; flex-direction:column; padding: 20px;">
+                    <h3 style="margin-bottom:10px; font-family: var(--font-heading);">${e.name} ${fullStatus}</h3>
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">📅 ${e.date} ${e.time}</p>
+                    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; flex:1;">📍 ${e.location}</p>
+                    <a href="events.html?id=${e.id}" class="btn-primary" style="text-align:center; padding:10px 0; border-radius:8px;">查看詳情與報名</a>
+                </div>
+            </div>
+            `;
+        }).join('');
+    };
+
+    // ============================================
+    // 後台：活動管理 CRUD
+    // ============================================
+    const eventEditModal = document.getElementById('eventEditModal');
+    const addEventBtn = document.getElementById('addEventBtn');
+    const eventEditForm = document.getElementById('eventEditForm');
+
+    window.renderAdminEventsList = function() {
+        const list = document.getElementById('adminEventsList');
+        if(!list) return;
+        if(events.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>沒有活動資料</p></div>';
+            return;
+        }
+        list.innerHTML = events.map(e => {
+            const openSpan = e.isActive ? `<span style="color:var(--accent); font-weight:bold;">上架中</span>` : `<span style="color:#ff4d4d; font-weight:bold;">已下架</span>`;
+            return `
+            <div class="admin-item" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:15px; margin-bottom:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h4 style="margin-bottom:5px; font-size:1.1rem;">${e.name}</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted);">日期: ${e.date} ${e.time} | 地點: ${e.location} | 人數上限: ${e.capacity}</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    ${openSpan}
+                    <button class="btn-secondary" style="padding:6px 12px; font-size:0.85rem;" onclick="openEventEditModal('${e.id}')">編輯</button>
+                    <button class="btn-danger" style="padding:6px 12px; font-size:0.85rem;" onclick="deleteEvent('${e.id}')">刪除</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    };
+
+    if (addEventBtn) {
+        addEventBtn.addEventListener('click', () => {
+            document.getElementById('eventEditTitle').textContent = '新增活動';
+            eventEditForm.reset();
+            document.getElementById('editEventDbId').value = '';
+            eventEditModal.style.display = 'block';
+        });
+    }
+
+    if (eventEditForm) {
+        eventEditForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(!db) { alert('離線模式無法操作活動'); return; }
+
+            const id = document.getElementById('editEventDbId').value;
+            const data = {
+                name: document.getElementById('editEventName').value,
+                date: document.getElementById('editEventDate').value,
+                time: document.getElementById('editEventTime').value,
+                location: document.getElementById('editEventLocation').value,
+                capacity: document.getElementById('editEventCapacity').value,
+                image: document.getElementById('editEventImage').value,
+                description: document.getElementById('editEventDesc').value,
+                isActive: document.getElementById('editEventActive').checked,
+            };
+
+            if (id) {
+                db.collection('events').doc(id).update(data)
+                .then(()=> { eventEditModal.style.display='none'; })
+                .catch(err=> alert('更新失敗:'+err));
+            } else {
+                db.collection('events').add(data)
+                .then(()=> { eventEditModal.style.display='none'; })
+                .catch(err=> alert('新增失敗:'+err));
+            }
+        });
+    }
+
+    window.openEventEditModal = function(id) {
+        const ev = events.find(x => x.id === id);
+        if(!ev) return;
+        document.getElementById('eventEditTitle').textContent = '編輯活動';
+        document.getElementById('editEventDbId').value = ev.id;
+        document.getElementById('editEventName').value = ev.name;
+        document.getElementById('editEventDate').value = ev.date||'';
+        document.getElementById('editEventTime').value = ev.time;
+        document.getElementById('editEventLocation').value = ev.location;
+        document.getElementById('editEventCapacity').value = ev.capacity;
+        document.getElementById('editEventImage').value = ev.image;
+        document.getElementById('editEventDesc').value = ev.description;
+        document.getElementById('editEventActive').checked = ev.isActive;
+        eventEditModal.style.display = 'block';
+    };
+
+    window.deleteEvent = function(id) {
+        if(confirm('確定要刪除此活動嗎？這不會刪除已報名的紀錄，但前台將不會再顯示該活動。')) {
+            db.collection('events').doc(id).delete();
+        }
+    };
+
+    // ============================================
+    // 後台：現場報到模組
+    // ============================================
+    window.updateCheckinSelect = function() {
+        const select = document.getElementById('checkinEventSelect');
+        if(!select) return;
+        const curVal = select.value;
+        select.innerHTML = '<option value="" disabled selected>請選擇要核對的活動...</option>' + 
+                           events.map(e => `<option value="${e.id}">${e.name} (${e.date})</option>`).join('');
+        if(events.some(e=>e.id===curVal)) select.value = curVal;
+    };
+
+    const checkinSelect = document.getElementById('checkinEventSelect');
+    const checkinSearch = document.getElementById('checkinSearchInput');
+
+    if(checkinSelect) {
+        checkinSelect.addEventListener('change', window.renderCheckinList);
+    }
+    if(checkinSearch) {
+        checkinSearch.addEventListener('input', window.renderCheckinList);
+    }
+
+    window.renderCheckinList = function() {
+        const tbody = document.getElementById('checkinTbody');
+        if(!tbody) return;
+        
+        const selectedId = checkinSelect ? checkinSelect.value : null;
+        if(!selectedId) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請先選擇上方活動</td></tr>';
+            document.getElementById('checkinCount').textContent = '0';
+            document.getElementById('checkinTotal').textContent = '0';
+            return;
+        }
+
+        let list = eventRegistrations.filter(r => r.eventId === selectedId);
+        
+        // 更新進度條
+        document.getElementById('checkinTotal').textContent = list.length;
+        document.getElementById('checkinCount').textContent = list.filter(r => r.status === 'checked-in').length;
+
+        // 搜尋功能
+        const keyword = (checkinSearch ? checkinSearch.value.trim() : '').toLowerCase();
+        if(keyword) {
+            list = list.filter(r => 
+                (r.userName && r.userName.toLowerCase().includes(keyword)) ||
+                (r.userPhone && r.userPhone.includes(keyword))
+            );
+        }
+
+        if(list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">沒有符合條件的名單</td></tr>';
+            return;
+        }
+
+        list.sort((a,b) => (a.timestamp > b.timestamp ? 1 : -1));
+
+        tbody.innerHTML = list.map(r => {
+            const isChecked = r.status === 'checked-in';
+            const statusDisplay = isChecked 
+                ? '<span style="color:#10b981; font-weight:bold;">已報到</span>' 
+                : '<span style="color:var(--text-muted);">未報到</span>';
+            
+            const actionBtn = isChecked
+                ? `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="toggleCheckin('${r.id}', 'registered')">取消報到</button>`
+                : `<button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#10b981; color:white; border:none;" onclick="toggleCheckin('${r.id}', 'checked-in')">報到</button>`;
+
+            return `
+            <tr>
+                <td style="color:var(--text-main); font-weight:bold;">${r.userName}</td>
+                <td>${r.userPhone}</td>
+                <td style="font-size:0.85rem; color:var(--text-muted);">${new Date(r.timestamp).toLocaleString('zh-TW')}</td>
+                <td>${statusDisplay}</td>
+                <td>${actionBtn}</td>
+            </tr>
+            `;
+        }).join('');
+    };
+
+    window.toggleCheckin = function(regId, newStatus) {
+        if(!db) return;
+        db.collection('event_registrations').doc(regId).update({ status: newStatus });
+    };
+
+    // 匯出名冊
+    const exportCheckinCsvBtn = document.getElementById('exportCheckinCsvBtn');
+    if(exportCheckinCsvBtn) {
+        exportCheckinCsvBtn.addEventListener('click', () => {
+            const selectedId = checkinSelect ? checkinSelect.value : null;
+            if(!selectedId) { alert('請先選擇活動'); return; }
+            
+            const ev = events.find(e => e.id === selectedId);
+            const list = eventRegistrations.filter(r => r.eventId === selectedId);
+            
+            let csvContent = "\uFEFF"; // BOM for UTF-8 Excel
+            csvContent += "表單流水號,姓名,電話,信箱,報名時間,報到狀態\n";
+            list.forEach(r => {
+                const s = r.status === 'checked-in' ? "已報到" : "未報到";
+                const row = `"${r.id}","${r.userName}","${r.userPhone}","${r.userEmail}","${new Date(r.timestamp).toLocaleString('zh-TW')}","${s}"`;
+                csvContent += row + "\n";
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `活動報到名冊_${ev.name}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        });
+    }
+
     // --- 最終啟動指令 ---
     initCustomCalendar();
     renderVenues();
+    if (window.renderEventPreview) window.renderEventPreview();
     if (window.renderSchedule) window.renderSchedule();
 });
