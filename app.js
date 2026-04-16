@@ -2180,21 +2180,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(events.some(e=>e.id===curVal)) select.value = curVal;
     };
 
-    const checkinSelect = document.getElementById('checkinEventSelect');
-    const checkinSearch = document.getElementById('checkinSearchInput');
-
-    if(checkinSelect) {
-        checkinSelect.addEventListener('change', window.renderCheckinList);
-    }
-    if(checkinSearch) {
-        checkinSearch.addEventListener('input', window.renderCheckinList);
-    }
-
-    const checkinSearchBtn = document.getElementById('checkinSearchBtn');
-    if(checkinSearchBtn) {
-        checkinSearchBtn.addEventListener('click', window.renderCheckinList);
-    }
-
     window.renderCheckinList = function() {
         const tbody = document.getElementById('checkinTbody');
         if(!tbody) return;
@@ -2259,6 +2244,21 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
     };
+
+    const checkinSelect = document.getElementById('checkinEventSelect');
+    const checkinSearch = document.getElementById('checkinSearchInput');
+
+    if(checkinSelect) {
+        checkinSelect.addEventListener('change', window.renderCheckinList);
+    }
+    if(checkinSearch) {
+        checkinSearch.addEventListener('input', window.renderCheckinList);
+    }
+
+    const checkinSearchBtn = document.getElementById('checkinSearchBtn');
+    if(checkinSearchBtn) {
+        checkinSearchBtn.addEventListener('click', window.renderCheckinList);
+    }
 
     window.toggleCheckin = function(regId, newStatus) {
         if(!db) return;
