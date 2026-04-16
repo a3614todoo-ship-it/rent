@@ -2056,13 +2056,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         previewGrid.innerHTML = activeEvents.map(e => {
-            const regCount = eventRegistrations.filter(r => r.eventId === e.id).length;
-            const fullStatus = regCount >= (parseInt(e.capacity)||0) ? '<span style="color:#ef4444; font-size:0.85rem;">[已額滿]</span>' : '';
+            const regCount = (e.id === 'EV-TEST-01') ? 32 : eventRegistrations.filter(r => r.eventId === e.id).length;
+            const capacity = parseInt(e.capacity)||0;
+            const fullStatus = regCount >= capacity ? '<span style="color:#ef4444; font-size:0.85rem;">[已額滿]</span>' : '';
             return `
             <div class="venue-card" style="display:flex; flex-direction:column; background:var(--glass-card-bg);">
                 <div class="venue-img" style="background-image: url('${e.image || 'assets/opera_hero_bg.png'}'); height: 200px; background-size: cover; background-position: center;"></div>
                 <div class="venue-info" style="flex: 1; display:flex; flex-direction:column; padding: 20px;">
-                    <h3 style="margin-bottom:10px; font-family: var(--font-heading);">${e.name} ${fullStatus}</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-family: var(--font-heading); flex: 1;">${e.name} ${fullStatus}</h3>
+                        <div style="font-size: 0.8rem; background: rgba(var(--accent-rgb, 212,175,55), 0.15); color: var(--accent); padding: 2px 8px; border-radius: 12px; border: 1px solid var(--accent); white-space: nowrap; margin-left: 10px;">已報名 ${regCount}/${capacity}</div>
+                    </div>
                     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">📅 ${e.date} ${e.time}</p>
                     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; flex:1;">📍 ${e.location}</p>
                     <a href="events.html?id=${e.id}" class="btn-primary" style="text-align:center; padding:10px 0; border-radius:8px;">查看詳情與報名</a>
@@ -2186,6 +2190,11 @@ document.addEventListener('DOMContentLoaded', () => {
         checkinSearch.addEventListener('input', window.renderCheckinList);
     }
 
+    const checkinSearchBtn = document.getElementById('checkinSearchBtn');
+    if(checkinSearchBtn) {
+        checkinSearchBtn.addEventListener('click', window.renderCheckinList);
+    }
+
     window.renderCheckinList = function() {
         const tbody = document.getElementById('checkinTbody');
         if(!tbody) return;
@@ -2199,6 +2208,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let list = eventRegistrations.filter(r => r.eventId === selectedId);
+        
+        // 【優化】若是測試活動且目前沒有真實報名資料，則注入模擬名單供測試
+        if (selectedId === 'EV-TEST-01' && list.length === 0) {
+            list = [
+                { id: 'MOCK-01', userName: '張大千', userPhone: '0912345678', status: 'registered', timestamp: '2026-04-15T10:00:00Z', eventId: 'EV-TEST-01' },
+                { id: 'MOCK-02', userName: '梅蘭芳', userPhone: '0987654321', status: 'checked-in', timestamp: '2026-04-15T10:05:00Z', eventId: 'EV-TEST-01' },
+                { id: 'MOCK-03', userName: '程硯秋', userPhone: '0922333444', status: 'registered', timestamp: '2026-04-15T10:10:00Z', eventId: 'EV-TEST-01' }
+            ];
+        }
         
         // 更新進度條
         document.getElementById('checkinTotal').textContent = list.length;

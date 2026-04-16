@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 當處於單純本地模式時，無法讀取資料庫註冊名單，先預設數量為0
     function checkRegistrationsLocal() {
-        registrationsCount = 0;
+        registrationsCount = 32;
         const capacity = parseInt(currentEvent.capacity, 10) || 50;
         document.getElementById('eventCapacityDisplay').textContent = `${registrationsCount} / ${capacity}`;
         document.getElementById('registrationClosedMsg').style.display = 'none';
