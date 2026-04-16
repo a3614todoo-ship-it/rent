@@ -348,9 +348,14 @@
                     <button class="btn-primary" id="checkinSearchBtn" style="padding: 10px 20px; font-size: 0.9rem; background: var(--accent); color: #000;">查詢</button>
                     <button class="btn-secondary" id="exportCheckinCsvBtn" style="padding: 10px 20px; font-size: 0.9rem;">匯出名冊</button>
                 </div>
-                <div class="glass-card" style="padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
-                    <h3 style="margin: 0; color: var(--accent);">報到進度</h3>
-                    <div style="font-size: 1.2rem; font-weight: bold;"><span id="checkinCount">0</span> / <span id="checkinTotal">0</span> 人</div>
+                <div class="glass-card" style="padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; align-items: stretch; background: rgba(0,0,0,0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <h3 style="margin: 0; color: var(--accent);">報到進度</h3>
+                        <div style="font-size: 1.2rem; font-weight: bold;"><span id="checkinCount">0</span> / <span id="checkinTotal">0</span> 人</div>
+                    </div>
+                    <div class="progress-container">
+                        <div id="checkinProgressBar" class="progress-bar-inner"></div>
+                    </div>
                 </div>
                 <div class="table-responsive glass-card">
                     <table class="schedule-table">

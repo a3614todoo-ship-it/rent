@@ -2204,8 +2204,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // 更新進度條
-        document.getElementById('checkinTotal').textContent = list.length;
-        document.getElementById('checkinCount').textContent = list.filter(r => r.status === 'checked-in').length;
+        const totalCount = list.length;
+        const checkedInCount = list.filter(r => r.status === 'checked-in').length;
+        document.getElementById('checkinTotal').textContent = totalCount;
+        document.getElementById('checkinCount').textContent = checkedInCount;
+
+        const progressBar = document.getElementById('checkinProgressBar');
+        if (progressBar) {
+            const percentage = totalCount > 0 ? (checkedInCount / totalCount) * 100 : 0;
+            progressBar.style.width = percentage + '%';
+        }
 
         // 搜尋功能
         const keyword = (checkinSearch ? checkinSearch.value.trim() : '').toLowerCase();

@@ -1191,3 +1191,22 @@ section.visible {
         font-size: 0.8rem;
     }
 }
+
+/* --- 進度條樣式 --- */
+.progress-container {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 15px;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-bar-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent) 0%, #10b981 100%);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
