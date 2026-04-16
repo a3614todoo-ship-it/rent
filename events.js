@@ -138,6 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('eventDateDisplay').textContent = `${currentEvent.date} (${currentEvent.time})`;
         document.getElementById('eventLocationDisplay').textContent = currentEvent.location;
         document.getElementById('eventImage').src = currentEvent.image || 'assets/opera_hero_bg.png';
+
+        // 動態生成自定義欄位
+        const container = document.getElementById('dynamicFieldsContainer');
+        if (container && currentEvent.customFields) {
+            container.innerHTML = currentEvent.customFields.map((f, index) => `
+                <div class="form-group">
+                    <label>${f.name}</label>
+                    <input type="${f.type}" class="custom-field-input" data-name="${f.name}" placeholder="請輸入${f.name}" ${f.required ? 'required' : ''}>
+                </div>
+            `).join('');
+        }
         
         // title
         document.title = `${currentEvent.name} | 藝境空間`;
@@ -159,16 +170,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const submitBtn = document.getElementById('regSubmitBtn');
 
                 if (registrationsCount >= capacity) {
-                    closedMsg.style.display = 'block';
-                    closedMsg.textContent = '此活動報名人數已額滿。';
-                    submitBtn.disabled = true;
-                    submitBtn.style.opacity = '0.5';
-                    submitBtn.style.cursor = 'not-allowed';
+                    if (currentEvent.allowWaitlist) {
+                        closedMsg.style.display = 'block';
+                        closedMsg.style.background = 'rgba(99, 102, 241, 0.1)';
+                        closedMsg.style.borderColor = '#6366f1';
+                        closedMsg.style.color = '#a5b4fc';
+                        closedMsg.textContent = '此活動目前名額已滿，您可加入候補名單，有名額釋出將會通知您。';
+                        submitBtn.textContent = '加入候補';
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.style.background = '#6366f1';
+                    } else {
+                        closedMsg.style.display = 'block';
+                        closedMsg.textContent = '此活動報名人數已額滿。';
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.5';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
                 } else {
                     closedMsg.style.display = 'none';
+                    submitBtn.textContent = '確認報名';
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
+                    submitBtn.style.background = 'var(--accent)';
                 }
             });
     }
@@ -181,7 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!currentEvent || !db) return;
             const capacity = parseInt(currentEvent.capacity, 10) || 0;
-            if (registrationsCount >= capacity) {
+            const isWaitlist = (registrationsCount >= capacity);
+
+            if (isWaitlist && !currentEvent.allowWaitlist) {
                 alert("已額滿，無法報名");
                 return;
             }
@@ -194,6 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const phone = document.getElementById('regPhone').value.trim();
             const email = document.getElementById('regEmail').value.trim();
 
+            // 收集自定義欄位
+            const customData = {};
+            document.querySelectorAll('.custom-field-input').forEach(input => {
+                customData[input.dataset.name] = input.value;
+            });
+
             const registrationData = {
                 eventId: currentEvent.id,
                 eventName: currentEvent.name,
@@ -201,21 +235,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 userPhone: phone,
                 userEmail: email,
                 timestamp: new Date().toISOString(),
-                status: 'registered' // 'registered' or 'checked-in'
+                status: isWaitlist ? 'waiting' : 'registered',
+                customData: customData
             };
-
-            // 若為本地測試模式 (無 db) 或離線
-            if (!db && currentEvent.id === 'EV-TEST-01') {
-                // console.log("本地模擬報名:", registrationData);
-                document.getElementById('successModal').style.display = 'flex';
-                return;
-            }
 
             db.collection('event_registrations').add(registrationData)
                 .then((docRef) => {
-                    // console.log("報名成功，流水號: ", docRef.id);
                     document.getElementById('successModal').style.display = 'flex';
-                    // 視需要呼叫 EmailJS 發信 (這裡簡化，直接展示成功 Modal)
+                    // 發送自動通知信
+                    sendRegistrationEmail(registrationData);
                 })
                 .catch((error) => {
                     // 如果 Firestore 存取被拒 (通常是未登入卻去寫入等安全規則，或是 db 根本連不上)
@@ -228,6 +256,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.textContent = '確認報名';
                     }
                 });
-        });
+    }
+
+    /**
+     * 發送報名成功或候補通知電子郵件 (透過 EmailJS)
+     */
+    function sendRegistrationEmail(data) {
+        // 請填入您的 EmailJS Service ID 與 Template ID
+        const SERVICE_ID = 'YOUR_SERVICE_ID'; 
+        const TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+
+        if (SERVICE_ID === 'YOUR_SERVICE_ID' || typeof emailjs === 'undefined') {
+            console.warn("EmailJS SERVICE_ID 未設定或套件未載入，跳過發信");
+            return;
+        }
+
+        const templateParams = {
+            user_name: data.userName,
+            user_phone: data.userPhone,
+            user_email: data.userEmail,
+            event_name: data.eventName,
+            event_date: currentEvent.date,
+            event_time: currentEvent.time,
+            event_location: currentEvent.location,
+            status_text: data.status === 'waiting' ? '候補中' : '報名成功'
+        };
+
+        emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams)
+            .then(res => console.log('Email 發送成功:', res))
+            .catch(err => console.error('Email 發送失敗:', err));
     }
 });

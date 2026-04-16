@@ -1408,6 +1408,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.updateCheckinSelect === 'function') window.updateCheckinSelect();
                 if (typeof window.renderCheckinList === 'function') window.renderCheckinList();
             }
+            if (target === 'analyticsTab') {
+                if (typeof window.renderAnalytics === 'function') window.renderAnalytics();
+            }
         });
     });
 
@@ -2082,6 +2085,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventEditModal = document.getElementById('eventEditModal');
     const addEventBtn = document.getElementById('addEventBtn');
     const eventEditForm = document.getElementById('eventEditForm');
+    const addCustomFieldBtn = document.getElementById('addCustomFieldBtn');
+    const customFieldsContainer = document.getElementById('customFieldsContainer');
+
+    let currentEditingCustomFields = [];
+
+    if (addCustomFieldBtn) {
+        addCustomFieldBtn.addEventListener('click', () => {
+            currentEditingCustomFields.push({ name: '', type: 'text', required: true });
+            renderCustomFieldEditors();
+        });
+    }
+
+    function renderCustomFieldEditors() {
+        if (!customFieldsContainer) return;
+        customFieldsContainer.innerHTML = currentEditingCustomFields.map((f, index) => `
+            <div class="form-row" style="gap: 10px; margin-bottom: 10px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <input type="text" placeholder="欄位名稱 (如: 公司名稱)" value="${f.name}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2;">
+                <select onchange="updateCustomField(${index}, 'type', this.value)" style="flex: 1;">
+                    <option value="text" ${f.type==='text'?'selected':''}>單行文字</option>
+                    <option value="tel" ${f.type==='tel'?'selected':''}>電話</option>
+                    <option value="select" ${f.type==='select'?'selected':''}>選項</option>
+                </select>
+                <button type="button" class="btn-danger" onclick="removeCustomField(${index})" style="padding: 5px 10px;">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    window.updateCustomField = (index, field, value) => {
+        currentEditingCustomFields[index][field] = value;
+    };
+
+    window.removeCustomField = (index) => {
+        currentEditingCustomFields.splice(index, 1);
+        renderCustomFieldEditors();
+    };
 
     window.renderAdminEventsList = function() {
         const list = document.getElementById('adminEventsList');
@@ -2113,6 +2151,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('eventEditTitle').textContent = '新增活動';
             eventEditForm.reset();
             document.getElementById('editEventDbId').value = '';
+            currentEditingCustomFields = [];
+            renderCustomFieldEditors();
             eventEditModal.style.display = 'block';
         });
     }
@@ -2132,6 +2172,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 image: document.getElementById('editEventImage').value,
                 description: document.getElementById('editEventDesc').value,
                 isActive: document.getElementById('editEventActive').checked,
+                allowWaitlist: document.getElementById('editEventAllowWaitlist').checked,
+                customFields: currentEditingCustomFields.filter(f => f.name.trim() !== '')
             };
 
             if (id) {
@@ -2159,6 +2201,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventImage').value = ev.image;
         document.getElementById('editEventDesc').value = ev.description;
         document.getElementById('editEventActive').checked = ev.isActive;
+        document.getElementById('editEventAllowWaitlist').checked = !!ev.allowWaitlist;
+        currentEditingCustomFields = ev.customFields || [];
+        renderCustomFieldEditors();
         eventEditModal.style.display = 'block';
     };
 
@@ -2297,6 +2342,82 @@ document.addEventListener('DOMContentLoaded', () => {
             link.click();
         });
     }
+
+    // ============================================
+    // 後台：數據分析儀表板
+    // ============================================
+    let trendChart = null;
+    let distChart = null;
+
+    window.renderAnalytics = function() {
+        if (!eventRegistrations) return;
+
+        // 1. 基礎統計數據
+        const totalReg = eventRegistrations.length;
+        const checkedIn = eventRegistrations.filter(r => r.status === 'checked-in').length;
+        const waiting = eventRegistrations.filter(r => r.status === 'waiting').length;
+        const checkInRate = totalReg > 0 ? Math.round((checkedIn / (totalReg - waiting)) * 100) : 0;
+
+        document.getElementById('statTotalReg').textContent = totalReg;
+        document.getElementById('statCheckinRate').textContent = checkInRate + '%';
+        document.getElementById('statWaitingCount').textContent = waiting;
+
+        // 2. 趨勢圖：按天統計報名人數
+        const dailyData = {};
+        eventRegistrations.forEach(r => {
+            const day = r.timestamp.slice(0, 10);
+            dailyData[day] = (dailyData[day] || 0) + 1;
+        });
+        const sortedDays = Object.keys(dailyData).sort();
+        const trendLabels = sortedDays.slice(-7); // 取最近 7 天
+        const trendValues = trendLabels.map(d => dailyData[d]);
+
+        if (trendChart) trendChart.destroy();
+        const trendCtx = document.getElementById('registrationTrendChart')?.getContext('2d');
+        if (trendCtx) {
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: '每日報名人數',
+                        data: trendValues,
+                        borderColor: '#d4af37',
+                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+            });
+        }
+
+        // 3. 分布圖：熱門活動分布
+        const eventData = {};
+        events.forEach(e => {
+            const count = eventRegistrations.filter(r => r.eventId === e.id).length;
+            if (count > 0) eventData[e.name] = count;
+        });
+        const eventLabels = Object.keys(eventData);
+        const eventValues = Object.values(eventData);
+
+        if (distChart) distChart.destroy();
+        const distCtx = document.getElementById('eventDistributionChart')?.getContext('2d');
+        if (distCtx) {
+            distChart = new Chart(distCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: eventLabels,
+                    datasets: [{
+                        data: eventValues,
+                        backgroundColor: ['#d4af37', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 10 } } } }
+            });
+        }
+    };
 
     // --- 最終啟動指令 ---
     initCustomCalendar();
