@@ -9,8 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const EMAILJS_PUBLIC_KEY = '2NlEiWtXcW05Awbjt'; // 替換為您的 Public Key
     const EMAILJS_SERVICE_ID = 'service_96agth6'; // 替換為您的 Service ID
-    const EMAILJS_TEMPLATE_ID = 'template_rle8t5f'; // 此為「核准/成功」的 Template ID
-    const EMAILJS_REJECT_TEMPLATE_ID = 'template_uz1rccd'; // 此為「拒絕退回」專用 Template ID
+    const EMAILJS_TEMPLATE_ID = 'template_uz1rccd'; // 萬用樣板 ID (請確保此樣板內含 {{{message_html}}} 與 {{subject}})
 
     // 初始化 EmailJS SDK
     if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY.length > 5) {
@@ -1599,8 +1598,123 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     };
 
+    function generateVenueEmailHTML(item, isReject, venueName, slotStr, equipStr) {
+        const applicantName = item.applicant;
+        const groupName = item.groupName;
+        const bookingId = item.id;
+        const bookingDate = item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`;
+        const totalRent = item.totalRent || '無';
+
+        // 郵件共用樣式變數
+        const mainFont = 'system-ui, -apple-system, sans-serif';
+        const primaryColor = '#1f2937'; // 頁首深藍色
+        const successColor = '#10b981'; // 通過綠色
+        const accentBlue = '#3b82f6';  // 資訊卡刻度藍
+        const alertBg = '#fff1f2';    // 重要提醒背景
+        const alertBorder = '#fecaca'; // 重要提醒邊框
+        const alertText = '#991b1b';  // 重要提醒文字
+
+        const statusLabel = isReject ? 
+            '<span style="color: #6b7280;">審核退回</span>' : 
+            `<span style="color: ${successColor};">審核通過</span>`;
+
+        const headerTitle = isReject ? '預約申請退回通知' : '專業戲曲排練場預約通知';
+
+        let mainContent = '';
+
+        if (isReject) {
+            mainContent = `
+            <p style="margin-bottom: 20px;">親愛的 <strong>${applicantName}</strong> 您好，</p>
+            <p>感謝 <strong>${groupName}</strong> 預約【藝境空間】排練場地！<br>
+            很抱歉告知您，您的預約申請因檔期衝突或其他行政因素，目前為「${statusLabel}」。</p>
+            <p>該場次已重新釋出供其他單位申請。造成您的不便，敬請見諒。</p>
+            
+            <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid #94a3b8; margin: 30px 0;">
+                <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #334155;">📋 申請退回明細</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                    <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">申請案號</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingId}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentBlue};">${venueName}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingDate}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借時段</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${slotStr}</td></tr>
+                </table>
+            </div>`;
+        } else {
+            mainContent = `
+            <p style="margin-bottom: 10px;">親愛的 <strong>${applicantName}</strong> 您好，</p>
+            <p style="margin-bottom: 20px;">感謝 <strong>${groupName}</strong> 預約【藝境空間】排練場地！<br>
+            您的預約申請已經由管理員 ${statusLabel}。以下是您的預約明細：</p>
+
+            <!-- 預約明細卡片 -->
+            <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${accentBlue}; margin-bottom: 30px;">
+                <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 預約明細</h3>
+                <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                    <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">申請案號</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b; letter-spacing: 1px;">${bookingId}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentBlue};">${venueName}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingDate}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借時段</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${slotStr}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">附加器材</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${equipStr}</td></tr>
+                </table>
+                <div style="height: 1px; background-color: #e2e8f0; margin: 15px 0;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #64748b; font-size: 15px;">總計租金</span>
+                    <span style="font-size: 20px; font-weight: bold; color: #ef4444;">NT$ ${totalRent.toLocaleString()}</span>
+                </div>
+            </div>
+
+            <h3 style="display: flex; align-items: center; gap: 8px; font-size: 17px; color: #1e293b; margin-bottom: 15px;">💳 訂金匯款資訊與繳費期限</h3>
+            <p style="font-size: 14px; color: #475569; margin-bottom: 15px; line-height: 1.6;">
+                為確保您的預約權益，請務必於「<strong>租用日期的前五天</strong>」完成訂金匯款作業。剩餘尾款可於排練第一天至櫃檯繳交。
+            </p>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background-color: #ffffff; margin-bottom: 30px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                    <tr><td style="padding: 6px 0; color: #64748b; width: 100px;">銀行名稱</td><td style="padding: 6px 0; font-weight: bold; color: #1e293b;">永豐銀行 萬華分行 (代碼: 807)</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;">帳戶名稱</td><td style="padding: 6px 0; font-weight: bold; color: #1e293b;">藝境空間</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;">匯款帳號</td><td style="padding: 6px 0; font-weight: bold; color: #1e293b;">12879526-45</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;">訂金金額</td><td style="padding: 6px 0; font-weight: bold; color: #ef4444;">NT$ 3,000</td></tr>
+                </table>
+            </div>
+
+            <!-- 重要提醒區塊 -->
+            <div style="background-color: ${alertBg}; border: 1px solid ${alertBorder}; border-radius: 8px; padding: 20px; color: ${alertText}; margin-bottom: 35px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 12px;">▲</span> 重要提醒
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+                    <li>匯款完成後，請直接回信或來電告知您的「<strong>匯款帳號後五碼</strong>」，以便對帳。</li>
+                    <li>若逾期未完成匯款，系統將自動取消預約並釋出該檔期。</li>
+                    <li>預約當天請憑本核准信件向櫃檯人員報到。</li>
+                </ul>
+            </div>`;
+        }
+
+        return `
+        <div style="background-color: #f3f4f6; padding: 40px 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">${headerTitle}</p>
+                </div>
+                
+                <!-- Main Body -->
+                <div style="padding: 40px; line-height: 1.6; color: #334155; font-family: ${mainFont};">
+                    ${mainContent}
+
+                    <!-- Conclusion -->
+                    <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px; margin-top: 20px;">
+                        <p style="margin: 0; font-size: 15px; color: #475569;">期待在藝境空間為您提供最優質的排練體驗！</p>
+                        <p style="margin: 5px 0 25px 0; font-size: 15px; color: #475569;">若有任何疑問，歡迎隨時與我們聯繫。</p>
+                        <h4 style="margin: 0; font-size: 18px; color: #1e293b;">敬祝 排練順利，演出成功！</h4>
+                        <p style="margin: 15px 0 0 0; font-size: 14px; color: #94a3b8;">藝境空間 管理團隊 敬上</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+
     function sendEmail(item, isResend = false, isReject = false) {
-        // 如果有填寫金鑰，就進行真實的 API 寄信
         if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY.length > 5) {
             const venueName = venues.find(v => v.id === item.venue)?.name || item.venue;
 
@@ -1619,23 +1733,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.equipment && Array.isArray(item.equipment)) {
                 equipStrList = item.equipment.map(eq => typeof eq === 'string' ? eq : `${eq.name} (x${eq.qty})`);
             }
+            const equipStr = equipStrList.length > 0 ? equipStrList.join('、') : '無';
+
+            // 動態生成 HTML 與主旨
+            const emailHtml = generateVenueEmailHTML(item, isReject, venueName, slotStr, equipStr);
+            const statusLabel = isReject ? '預約申請正式退回' : '預約申請核准通知';
+            const subject = `【${statusLabel}】${venueName} - ${item.groupName} ${isResend ? '(補發)' : ''}`;
+            // 處理總金額呈現
+            const totalRentRaw = item.totalRent || '無';
+            const totalRentDisplay = (typeof totalRentRaw === 'number') ? totalRentRaw.toLocaleString() : totalRentRaw;
 
             const templateParams = {
                 to_email: item.email,
+                subject: subject,
+                message_html: emailHtml,
+                // 增加回溯相容變數，避免範本未更新時內容空白
                 applicant_name: item.applicant,
                 group_name: item.groupName,
                 booking_id: item.id,
                 venue_name: venueName,
                 booking_date: item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`,
                 booking_slots: slotStr,
-                booking_equipment: equipStrList.length > 0 ? equipStrList.join('、') : '無',
-                total_rent: item.totalRent || '無',
-                status: isReject ? '退回' : '核准'
+                booking_equipment: equipStr,
+                total_rent: totalRentDisplay
             };
 
-            const targetTemplate = isReject && EMAILJS_REJECT_TEMPLATE_ID ? EMAILJS_REJECT_TEMPLATE_ID : EMAILJS_TEMPLATE_ID;
-
-            emailjs.send(EMAILJS_SERVICE_ID, targetTemplate, templateParams)
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
                 .then(() => {
                     const statusStr = isReject ? '退回' : '核准';
                     const prefix = isResend ? '【補寄發信成功】' : '【發信成功】';
@@ -1643,10 +1766,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .catch((err) => {
                     console.error('EmailJS 寄信失敗:', err);
-                    alert(`【發信失敗】\n狀態碼：${err.status || '未知'}\n詳細錯誤：${err.text || err.message || JSON.stringify(err)}\n\n(這通常代表金鑰的字母被截斷了，或是瀏覽器阻攔了請求，請參考此訊息)`);
+                    alert(`【發信失敗】\n原因：${err.text || '連線錯誤'}\n狀態碼：${err.status || '未知'}\n\n請確認您的 Public Key 是否與 Service ID/Template ID 匹配。`);
                 });
         } else {
-            // 原有的模擬發信
             const statusStr = isReject ? '退回' : '核准';
             const prefix = isResend ? '【模擬重新寄出】' : '【系統模擬發信】';
             alert(`${prefix}已成功寄送${statusStr}通知至聯絡人 ${item.applicant} 的信箱：${item.email}\n(註：您尚未填寫 EmailJS 金鑰，目前為模擬通知)`);
