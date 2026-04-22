@@ -16,63 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         emailjs.init(EMAILJS_PUBLIC_KEY);
     }
 
-    // 1. 場地資源 (全域動態變數)
-    let venues = [];
-
-    // 預設資料 (若 Firebase 首次連線內部沒資料時，寫入這些當作種子)
-    const defaultVenues = [
-        {
-            id: 'dance',
-            name: '雲水排練場',
-            type: '武戲與身段排練室',
-            capacity: '20-30人',
-            pricing: { morning: 3200, afternoon: 3200, evening: 4000 },
-            timings: { morning: '09:00-13:00', afternoon: '14:00-18:00', evening: '19:00-23:00' },
-            desc: '專為武戲與身段排練設計，高度達4米，配有專業彈性木地板與全牆面大鏡，適合各類甩髮、水袖及翻跌動作的日常排演。',
-            tags: ['挑高空間', '專業彈性木地板', '全牆大鏡面'],
-            image: 'assets/dance_studio.png',
-            isActive: true,
-            order: 1
-        },
-        {
-            id: 'music',
-            name: '絲竹雅音室',
-            type: '文場與唱腔排練室',
-            capacity: '5-10人',
-            pricing: { morning: 2400, afternoon: 2400, evening: 3000 },
-            timings: { morning: '09:00-13:00', afternoon: '14:00-18:00', evening: '19:00-23:00' },
-            desc: '本空間提供絕佳的隔音設計與吸音材質，專為文場伴奏、京胡、二胡等傳統戲曲器樂及演員吊嗓唱腔排練打造。',
-            tags: ['文場器樂隔音', '戲曲排練專用桌椅', '錄製設備'],
-            image: 'assets/music_room.png',
-            isActive: true,
-            order: 2
-        },
-        {
-            id: 'theater',
-            name: '梨園實驗劇場',
-            type: '總彩排黑盒劇場',
-            capacity: '50-80人',
-            pricing: { morning: 6000, afternoon: 6000, evening: 7500 },
-            timings: { morning: '09:00-13:00', afternoon: '14:00-18:00', evening: '19:00-23:00' },
-            desc: '可容納多名演員進行全劇走位與總彩排。配備頂級舞臺燈光及多視角側幕，並附設階梯式觀眾席供導演與劇團內部觀摩。',
-            tags: ['專業舞台燈光', '多角度側幕', '階梯式觀眾席'],
-            image: 'assets/black_box.png',
-            isActive: true,
-            order: 3
-        }
-    ];
-
-    // 1.1 器材資源 (新增器材清單)
-    let equipment = [];
-    const defaultEquipment = [
-        { name: '京胡 (專業級)', price: 500, totalQty: 5, description: '專業演出的京胡，附琴絃支撐。', image: 'assets/jinghu.png', isActive: true, order: 1 },
-        { name: '單皮鼓與板 (組)', price: 400, totalQty: 3, description: '傳統武場打擊樂器，含鼓架。', image: 'assets/bangu_clapper.png', isActive: true, order: 2 },
-        { name: '一桌二椅 (組)', price: 800, totalQty: 2, description: '傳統梨園舞台調度必備桌椅。', image: 'assets/table_chairs.png', isActive: true, order: 3 },
-        { name: '無線麥克風 (一組兩入)', price: 600, totalQty: 4, description: '高品質U頻無線系統，附備用電池。', image: 'assets/wireless_mics.png', isActive: true, order: 4 },
-        { name: '移動式大鏡子', price: 200, totalQty: 6, description: '全身式帶輪鏡子，適合身段與走位校正。', image: 'assets/moveable_mirror.png', isActive: true, order: 5 }
-    ];
-
-    // 1.5 Firebase 資料庫初始化 (取代原本的 localStorage)
+    // 1.5 Firebase 資料庫初始化
     const firebaseConfig = {
         apiKey: "AIzaSyDplIrzsJEHIpFTS7HdqeojHV38Le_vAgA",
         authDomain: "rental-b60e1.firebaseapp.com",
@@ -83,11 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let db = null;
+    let venues = [];
+    let equipment = [];
     let bookings = [];
     let events = [];
     let eventRegistrations = [];
 
-    // 【容錯優化】將初始化包裹在 try-catch 中，避免本地檔案瀏覽時因安全限制導致腳本崩潰
     try {
         if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR")) {
             firebase.initializeApp(firebaseConfig);
@@ -100,38 +45,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     venues.push({ dbId: doc.id, ...doc.data() });
                 });
 
-                if (venues.length === 0) {
-                    // 若資料庫為空，僅載入至記憶體變數，取消自動 add() 避免 Github Pages 重新啟動時因為 snapshot 空窗期造成重複
-                    venues = [...defaultVenues];
-                }
-                
                 if (typeof window.renderVenues === 'function') window.renderVenues();
                 if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                 const adminPanel = document.getElementById('adminPanel');
                 if (adminPanel && adminPanel.style.display === 'block') {
                     if (window.renderAdminVenueList) window.renderAdminVenueList();
                 }
-            }, (err) => console.log("Firebase Venues Offline:", err));
+            }, (err) => console.error("Firebase Venues Offline:", err));
 
-            // 【新增】器材動態監聽
+            // 器材動態監聽
             db.collection("equipment").orderBy("order", "asc").onSnapshot((snapshot) => {
                 equipment = [];
                 snapshot.forEach((doc) => {
                     equipment.push({ dbId: doc.id, ...doc.data() });
                 });
 
-                if (equipment.length === 0) {
-                    // 同理，僅賦值以供渲染
-                    equipment = [...defaultEquipment];
-                }
-                
                 if (typeof window.renderBookingEquipment === 'function') window.renderBookingEquipment();
                 if (typeof window.renderPricingTables === 'function') window.renderPricingTables();
                 const adminPanel = document.getElementById('adminPanel');
                 if (adminPanel && adminPanel.style.display === 'block') {
                     if (window.renderAdminEquipmentList) window.renderAdminEquipmentList();
                 }
-            }, (err) => console.log("Firebase Equipment Offline:", err));
+            }, (err) => console.error("Firebase Equipment Offline:", err));
 
             // 訂單監聽
             db.collection("bookings").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
@@ -144,29 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (adminPanel && adminPanel.style.display === 'block') {
                     if (window.renderAdminList) window.renderAdminList();
                 }
-            }, (error) => console.log("Firebase Bookings Offline:", error));
+            }, (error) => console.error("Firebase Bookings Offline:", error));
 
-            // 【新增】活動監聽
+            // 活動監聽
             db.collection("events").orderBy("date", "asc").onSnapshot((snapshot) => {
                 events = [];
                 snapshot.forEach((doc) => {
                     events.push({ id: doc.id, ...doc.data() });
                 });
-                
-                // 如果 Firebase 中還沒有活動，自動產出一筆測試活動供預覽
-                if (events.length === 0) {
-                    events = [{
-                        id: 'EV-TEST-01',
-                        name: '【大師開講】京劇武行身段解析與排演應用',
-                        date: '2026-05-20',
-                        time: '14:00-16:30',
-                        location: '梨園實驗劇場',
-                        capacity: 50,
-                        image: 'assets/event_lecture_test.png',
-                        description: '邀請資深京劇大師親自示範，帶領新生代演員從基礎的手眼身法步，進階至實際舞臺調度上的應用轉換。課程將包含實地體驗與QA問答環節，名額有限，歡迎熱愛傳統戲曲的朋友踴躍報名！',
-                        isActive: true
-                    }];
-                }
 
                 if (window.renderEventPreview) window.renderEventPreview();
                 const adminPanel = document.getElementById('adminPanel');
@@ -174,9 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.renderAdminEventsList) window.renderAdminEventsList();
                     if (window.updateCheckinSelect) window.updateCheckinSelect();
                 }
-            }, (error) => console.log("Firebase Events Offline:", error));
+            }, (error) => console.error("Firebase Events Offline:", error));
 
-            // 【新增】活動報名監聽
+            // 活動報名監聽
             db.collection("event_registrations").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
                 eventRegistrations = [];
                 snapshot.forEach((doc) => {
@@ -186,13 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (adminPanel && adminPanel.style.display === 'block') {
                     if (window.renderCheckinList) window.renderCheckinList();
                 }
-            }, (error) => console.log("Firebase Event Reg Offline:", error));
+            }, (error) => console.error("Firebase Event Reg Offline:", error));
 
             // 【新增】系統設定監聽 (用於預設主題等)
             db.collection("settings").doc("system").onSnapshot((doc) => {
                 if (doc.exists) {
                     const sysData = doc.data();
-                    
+
                     // 動態載入背景圖片設定
                     if (sysData.heroImageDark) {
                         document.documentElement.style.setProperty('--hero-bg-image-dark', `url('${sysData.heroImageDark}')`);
@@ -285,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookings = storedData ? JSON.parse(storedData) : defaultBookings;
         venues = [...defaultVenues];
         equipment = [...defaultEquipment]; // 本地模式也載入器材
-        
+
         // 賦予本地測試活動
         events = [{
             id: 'EV-TEST-01',
@@ -528,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderPricingTables = function () {
         const venueTbody = document.getElementById('pricingVenueTbody');
         const equipTbody = document.getElementById('pricingEquipTbody');
-        
+
         if (venueTbody) {
             const activeVenues = venues.filter(v => v.isActive !== false);
             venueTbody.innerHTML = activeVenues.map(v => {
@@ -1254,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomCalendar();
     renderVenues();
     if (window.renderSchedule) window.renderSchedule();
-    
+
     // 預設今日日期為 inventoryDate
     const invDateInput = document.getElementById('inventoryDate');
     if (invDateInput) {
@@ -1297,19 +1217,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    adminLoginSubmit.addEventListener('click', () => {
+    adminLoginSubmit.addEventListener('click', async () => {
         const user = document.getElementById('adminUsername').value.trim();
         const pass = document.getElementById('adminPassword').value.trim();
 
-        if (user === 'admin' && pass === 'admin@123') {
-            isAdminLoggedIn = true;
-            alert('登入成功，切換至後台模式。');
-            loginModal.style.display = 'none';
-            document.getElementById('adminUsername').value = '';
-            document.getElementById('adminPassword').value = '';
-            setAdminView();
-        } else {
-            alert('帳號或密碼錯誤！');
+        if (!user || !pass) {
+            alert('請輸入帳號與密碼');
+            return;
+        }
+
+        try {
+            // 方案二：遠端資料庫驗證
+            const authDoc = await db.collection('admin_access').doc('auth').get();
+            if (authDoc.exists) {
+                const authData = authDoc.data();
+                if (user === authData.username && pass === authData.password) {
+                    isAdminLoggedIn = true;
+                    loginModal.style.display = 'none';
+                    document.getElementById('adminUsername').value = '';
+                    document.getElementById('adminPassword').value = '';
+                    setAdminView();
+                    localStorage.setItem('isAdmin', 'true');
+                } else {
+                    alert('帳號或密碼錯誤');
+                }
+            } else {
+                alert('驗證系統尚未初始化，請聯絡開發人員。');
+            }
+        } catch (error) {
+            console.error("驗證失敗:", error);
+            alert("驗證系統連線失敗，請檢查網路。");
         }
     });
 
@@ -1525,7 +1462,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 h = parseInt(h, 10);
                 if (ampm === '下午' && h < 12) h += 12;
                 if (ampm === '上午' && h === 12) h = 0;
-                return new Date(y, m-1, d, h, min, sec).getTime();
+                return new Date(y, m - 1, d, h, min, sec).getTime();
             }
             return new Date(str.replace('上午', ' AM').replace('下午', ' PM')).getTime() || 0;
         };
@@ -1582,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
                 <div class="admin-item">
-                    <div>
+                    <div style="flex: 1; min-width: 0;">
                         <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 5px;">${b.id} | ${b.timestamp}</div>
                         <h4 style="margin-bottom: 5px;">${venueName} [${slotDisplay}]</h4>
                         <p style="font-size: 0.85rem; color: var(--text-muted);">
@@ -1592,8 +1529,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${equipDisplay}
                         <p style="font-size: 0.85rem; color: var(--accent); margin-top: 5px; font-weight: bold;">總計租金: ${b.totalRent || '無'}</p>
                     </div>
-                    ${actionHtml}
-                    ${b.status !== '審核中' ? `<div style="font-size: 0.9rem; font-weight: bold; white-space: nowrap; margin-left: 10px; color: ${b.status === '預約成功' ? 'var(--accent)' : 'var(--danger)'};">${b.status}</div>` : ''}
+                    <div style="width: 220px; display: flex; justify-content: center; align-items: center; gap: 8px; margin-left: 15px;">
+                        ${actionHtml}
+                    </div>
+                    <div style="width: 80px; display: flex; justify-content: flex-end; align-items: center; font-size: 0.9rem; font-weight: bold; white-space: nowrap; color: ${b.status === '預約成功' ? 'var(--accent)' : (b.status === '預約退回' ? 'var(--danger)' : '#6b7280')};">
+                        ${b.status}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1615,8 +1556,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const alertBorder = '#fecaca'; // 重要提醒邊框
         const alertText = '#991b1b';  // 重要提醒文字
 
-        const statusLabel = isReject ? 
-            '<span style="color: #6b7280;">審核退回</span>' : 
+        const statusLabel = isReject ?
+            '<span style="color: #6b7280;">審核退回</span>' :
             `<span style="color: ${successColor};">審核通過</span>`;
 
         const headerTitle = isReject ? '預約申請退回通知' : '專業戲曲排練場預約通知';
@@ -1628,7 +1569,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p style="margin-bottom: 20px;">親愛的 <strong>${applicantName}</strong> 您好，</p>
             <p>感謝 <strong>${groupName}</strong> 預約【藝境空間】排練場地！<br>
             很抱歉告知您，您的預約申請因檔期衝突或其他行政因素，目前為「${statusLabel}」。</p>
-            <p>該場次已重新釋出供其他單位申請。造成您的不便，敬請見諒。</p>
+            <p>造成您的不便，敬請見諒。</p>
             
             <div style="background-color: #ffffff; padding: 25px; border-radius: 4px; border-left: 4px solid #94a3b8; margin: 30px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #334155;">📋 申請退回明細</h3>
@@ -1961,7 +1902,7 @@ document.addEventListener('DOMContentLoaded', () => {
         venueEditModal.classList.add('show');
     };
 
-    window.deleteVenue = function(dbId) {
+    window.deleteVenue = function (dbId) {
         if (!confirm('確認要永久刪除此場地資料嗎？此操作無法還原，且前台也會同步撤下。')) return;
         if (db && dbId) {
             db.collection("venues").doc(dbId).delete().then(() => {
@@ -2173,7 +2114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================
     // 前台：首頁活動預覽區
     // ============================================
-    window.renderEventPreview = function() {
+    window.renderEventPreview = function () {
         const previewGrid = document.getElementById('eventPreviewGrid');
         if (!previewGrid) return;
         const activeEvents = events.filter(e => e.isActive !== false);
@@ -2183,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         previewGrid.innerHTML = activeEvents.map(e => {
             const regCount = (e.id === 'EV-TEST-01') ? 32 : eventRegistrations.filter(r => r.eventId === e.id).length;
-            const capacity = parseInt(e.capacity)||0;
+            const capacity = parseInt(e.capacity) || 0;
             const fullStatus = regCount >= capacity ? '<span style="color:#ef4444; font-size:0.85rem;">[已額滿]</span>' : '';
             return `
             <div class="venue-card" style="display:flex; flex-direction:column; background:var(--glass-card-bg);">
@@ -2226,9 +2167,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="form-row" style="gap: 10px; margin-bottom: 10px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
                 <input type="text" placeholder="欄位名稱 (如: 公司名稱)" value="${f.name}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2;">
                 <select onchange="updateCustomField(${index}, 'type', this.value)" style="flex: 1;">
-                    <option value="text" ${f.type==='text'?'selected':''}>單行文字</option>
-                    <option value="tel" ${f.type==='tel'?'selected':''}>電話</option>
-                    <option value="select" ${f.type==='select'?'selected':''}>選項</option>
+                    <option value="text" ${f.type === 'text' ? 'selected' : ''}>單行文字</option>
+                    <option value="tel" ${f.type === 'tel' ? 'selected' : ''}>電話</option>
+                    <option value="select" ${f.type === 'select' ? 'selected' : ''}>選項</option>
                 </select>
                 <button type="button" class="btn-danger" onclick="removeCustomField(${index})" style="padding: 5px 10px;">&times;</button>
             </div>
@@ -2244,10 +2185,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCustomFieldEditors();
     };
 
-    window.renderAdminEventsList = function() {
+    window.renderAdminEventsList = function () {
         const list = document.getElementById('adminEventsList');
-        if(!list) return;
-        if(events.length === 0) {
+        if (!list) return;
+        if (events.length === 0) {
             list.innerHTML = '<div class="empty-state"><p>沒有活動資料</p></div>';
             return;
         }
@@ -2283,7 +2224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventEditForm) {
         eventEditForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            if(!db) { alert('離線模式無法操作活動'); return; }
+            if (!db) { alert('離線模式無法操作活動'); return; }
 
             const id = document.getElementById('editEventDbId').value;
             const data = {
@@ -2301,23 +2242,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (id) {
                 db.collection('events').doc(id).update(data)
-                .then(()=> { eventEditModal.style.display='none'; })
-                .catch(err=> alert('更新失敗:'+err));
+                    .then(() => { eventEditModal.style.display = 'none'; })
+                    .catch(err => alert('更新失敗:' + err));
             } else {
                 db.collection('events').add(data)
-                .then(()=> { eventEditModal.style.display='none'; })
-                .catch(err=> alert('新增失敗:'+err));
+                    .then(() => { eventEditModal.style.display = 'none'; })
+                    .catch(err => alert('新增失敗:' + err));
             }
         });
     }
 
-    window.openEventEditModal = function(id) {
+    window.openEventEditModal = function (id) {
         const ev = events.find(x => x.id === id);
-        if(!ev) return;
+        if (!ev) return;
         document.getElementById('eventEditTitle').textContent = '編輯活動';
         document.getElementById('editEventDbId').value = ev.id;
         document.getElementById('editEventName').value = ev.name;
-        document.getElementById('editEventDate').value = ev.date||'';
+        document.getElementById('editEventDate').value = ev.date || '';
         document.getElementById('editEventTime').value = ev.time;
         document.getElementById('editEventLocation').value = ev.location;
         document.getElementById('editEventCapacity').value = ev.capacity;
@@ -2330,8 +2271,8 @@ document.addEventListener('DOMContentLoaded', () => {
         eventEditModal.style.display = 'block';
     };
 
-    window.deleteEvent = function(id) {
-        if(confirm('確定要刪除此活動嗎？這不會刪除已報名的紀錄，但前台將不會再顯示該活動。')) {
+    window.deleteEvent = function (id) {
+        if (confirm('確定要刪除此活動嗎？這不會刪除已報名的紀錄，但前台將不會再顯示該活動。')) {
             db.collection('events').doc(id).delete();
         }
     };
@@ -2339,21 +2280,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================
     // 後台：現場報到模組
     // ============================================
-    window.updateCheckinSelect = function() {
+    window.updateCheckinSelect = function () {
         const select = document.getElementById('checkinEventSelect');
-        if(!select) return;
+        if (!select) return;
         const curVal = select.value;
-        select.innerHTML = '<option value="" disabled selected>請選擇要核對的活動...</option>' + 
-                           events.map(e => `<option value="${e.id}">${e.name} (${e.date})</option>`).join('');
-        if(events.some(e=>e.id===curVal)) select.value = curVal;
+        select.innerHTML = '<option value="" disabled selected>請選擇要核對的活動...</option>' +
+            events.map(e => `<option value="${e.id}">${e.name} (${e.date})</option>`).join('');
+        if (events.some(e => e.id === curVal)) select.value = curVal;
     };
 
-    window.renderCheckinList = function() {
+    window.renderCheckinList = function () {
         const tbody = document.getElementById('checkinTbody');
-        if(!tbody) return;
-        
+        if (!tbody) return;
+
         const selectedId = checkinSelect ? checkinSelect.value : null;
-        if(!selectedId) {
+        if (!selectedId) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請先選擇上方活動</td></tr>';
             document.getElementById('checkinCount').textContent = '0';
             document.getElementById('checkinTotal').textContent = '0';
@@ -2361,7 +2302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let list = eventRegistrations.filter(r => r.eventId === selectedId);
-        
+
         // 【優化】若是測試活動且目前沒有真實報名資料，則注入模擬名單供測試
         if (selectedId === 'EV-TEST-01' && list.length === 0) {
             list = [
@@ -2370,7 +2311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'MOCK-03', userName: '程硯秋', userPhone: '0922333444', status: 'registered', timestamp: '2026-04-15T10:10:00Z', eventId: 'EV-TEST-01' }
             ];
         }
-        
+
         const ev = events.find(e => e.id === selectedId);
         const capacity = parseInt(ev ? ev.capacity : 0, 10);
         const validCount = list.filter(r => r.status === 'registered' || r.status === 'checked-in').length;
@@ -2379,7 +2320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 更新進度條與統計
         const totalCount = list.length;
         const checkedInCount = list.filter(r => r.status === 'checked-in').length;
-        
+
         // 此處 checkinTotal 改顯示活動總容量較合理
         document.getElementById('checkinTotal').textContent = capacity || 0;
         document.getElementById('checkinCount').textContent = checkedInCount;
@@ -2398,25 +2339,25 @@ document.addEventListener('DOMContentLoaded', () => {
             availMsg.style.marginTop = '10px';
             document.getElementById('checkinTotal').parentNode.appendChild(availMsg);
         }
-        availMsg.innerHTML = availableSpots > 0 
-            ? `<span style="color:#f59e0b; font-weight:bold; font-size: 1rem;">🔥 釋出候補名額：${availableSpots} 人</span>` 
+        availMsg.innerHTML = availableSpots > 0
+            ? `<span style="color:#f59e0b; font-weight:bold; font-size: 1rem;">🔥 釋出候補名額：${availableSpots} 人</span>`
             : '';
 
         // 搜尋功能
         const keyword = (checkinSearch ? checkinSearch.value.trim() : '').toLowerCase();
-        if(keyword) {
-            list = list.filter(r => 
+        if (keyword) {
+            list = list.filter(r =>
                 (r.userName && r.userName.toLowerCase().includes(keyword)) ||
                 (r.userPhone && r.userPhone.includes(keyword))
             );
         }
 
-        if(list.length === 0) {
+        if (list.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">沒有符合條件的名單</td></tr>';
             return;
         }
 
-        list.sort((a,b) => {
+        list.sort((a, b) => {
             if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
             if (b.status === 'cancelled' && a.status !== 'cancelled') return -1;
             return a.timestamp > b.timestamp ? 1 : -1;
@@ -2426,7 +2367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = list.map(r => {
             let statusDisplay = '';
             let actionBtn = '';
-            
+
             if (r.status === 'checked-in') {
                 statusDisplay = '<span style="color:#10b981; font-weight:bold;">已報到</span>';
                 actionBtn = `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="toggleCheckin('${r.id}', 'registered')">取消報到</button>`;
@@ -2470,26 +2411,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkinSelect = document.getElementById('checkinEventSelect');
     const checkinSearch = document.getElementById('checkinSearchInput');
 
-    if(checkinSelect) {
+    if (checkinSelect) {
         checkinSelect.addEventListener('change', window.renderCheckinList);
     }
-    if(checkinSearch) {
+    if (checkinSearch) {
         checkinSearch.addEventListener('input', window.renderCheckinList);
     }
 
     const checkinSearchBtn = document.getElementById('checkinSearchBtn');
-    if(checkinSearchBtn) {
+    if (checkinSearchBtn) {
         checkinSearchBtn.addEventListener('click', window.renderCheckinList);
     }
 
-    window.toggleCheckin = function(regId, newStatus) {
-        if(!db) return;
+    window.toggleCheckin = function (regId, newStatus) {
+        if (!db) return;
         db.collection('event_registrations').doc(regId).update({ status: newStatus });
     };
 
-    window.cancelEventRegistration = function(regId) {
-        if(!db) return;
-        if(confirm("確定要將此報名者取消參加，並自動發送信件通知對方嗎？\n(資料不會刪除，僅標示為已取消並移至最下方)")) {
+    window.cancelEventRegistration = function (regId) {
+        if (!db) return;
+        if (confirm("確定要將此報名者取消參加，並自動發送信件通知對方嗎？\n(資料不會刪除，僅標示為已取消並移至最下方)")) {
             const userReg = eventRegistrations.find(r => r.id === regId);
             const ev = events.find(e => e.id === userReg?.eventId);
             db.collection('event_registrations').doc(regId).update({ status: 'cancelled' }).then(() => {
@@ -2501,12 +2442,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.promoteWaitlist = function(regId, eventId) {
-        if(!db) return;
-        if(confirm("確定要手動將此人遞補為正式報名，並自動發送候補成功信件給對方嗎？")) {
+    window.promoteWaitlist = function (regId, eventId) {
+        if (!db) return;
+        if (confirm("確定要手動將此人遞補為正式報名，並自動發送候補成功信件給對方嗎？")) {
             const userReg = eventRegistrations.find(r => r.id === regId);
             const ev = events.find(e => e.id === eventId);
-            if(userReg && ev) {
+            if (userReg && ev) {
                 db.collection('event_registrations').doc(regId).update({ status: 'registered' }).then(() => {
                     sendWaitlistSuccessEmail(userReg, ev);
                     alert("✅ 已成功遞補，系統已自動發送通知信！");
@@ -2519,7 +2460,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function sendWaitlistSuccessEmail(regData, eventData) {
-        const SERVICE_ID = 'service_96agth6'; 
+        const SERVICE_ID = 'service_96agth6';
         const TEMPLATE_ID = 'template_uz1rccd';
         if (SERVICE_ID === 'YOUR_SERVICE_ID' || typeof emailjs === 'undefined') {
             console.warn("EmailJS 未設定或套件未載入，跳過發信");
@@ -2529,7 +2470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainFont = 'system-ui, -apple-system, sans-serif';
         const primaryColor = '#8b5cf6'; // 主色調紫
         const successColor = '#10b981';
-        
+
         const emailHtml = `
         <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
@@ -2572,7 +2513,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function sendCancelEmail(regData, eventData) {
-        const SERVICE_ID = 'service_96agth6'; 
+        const SERVICE_ID = 'service_96agth6';
         const TEMPLATE_ID = 'template_uz1rccd';
         if (SERVICE_ID === 'YOUR_SERVICE_ID' || typeof emailjs === 'undefined') {
             console.warn("EmailJS 未設定或套件未載入，跳過發信");
@@ -2582,7 +2523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainFont = 'system-ui, -apple-system, sans-serif';
         const primaryColor = '#8b5cf6'; // 主色調紫
         const cancelColor = '#ef4444';
-        
+
         const emailHtml = `
         <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
@@ -2621,14 +2562,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 匯出名冊
     const exportCheckinCsvBtn = document.getElementById('exportCheckinCsvBtn');
-    if(exportCheckinCsvBtn) {
+    if (exportCheckinCsvBtn) {
         exportCheckinCsvBtn.addEventListener('click', () => {
             const selectedId = checkinSelect ? checkinSelect.value : null;
-            if(!selectedId) { alert('請先選擇活動'); return; }
-            
+            if (!selectedId) { alert('請先選擇活動'); return; }
+
             const ev = events.find(e => e.id === selectedId);
             const list = eventRegistrations.filter(r => r.eventId === selectedId);
-            
+
             let csvContent = "\uFEFF"; // BOM for UTF-8 Excel
             csvContent += "表單流水號,姓名,電話,信箱,報名時間,報到狀態\n";
             list.forEach(r => {
@@ -2639,7 +2580,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `活動報到名冊_${ev.name}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `活動報到名冊_${ev.name}_${new Date().toISOString().slice(0, 10)}.csv`;
             link.click();
         });
     }
@@ -2650,7 +2591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let trendChart = null;
     let distChart = null;
 
-    window.renderAnalytics = function() {
+    window.renderAnalytics = function () {
         if (!eventRegistrations) return;
 
         // 1. 基礎統計數據

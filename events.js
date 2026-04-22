@@ -3,21 +3,9 @@
  * 處理獨立活動詳情檢視、報名防呆與資料庫寫入
  */
 
-// [緊急偵錯] 全域錯誤監控移到最頂層
-window.onerror = function(msg, url, line, col, error) {
-    console.error("全域錯誤捕捉:", msg, error);
-    alert(`系統載入出錯 (全域)：\n${msg}\n(行號: ${line})\n如果您看到這個，請告訴我原因。`);
-    // 試著強制移除載入動態
-    try {
-        const ld = document.getElementById('loadingIndicator');
-        if (ld) ld.style.display = 'none';
-        const ed = document.getElementById('errorIndicator');
-        if (ed) ed.style.display = 'block';
-    } catch(e) {}
-};
+
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("events.js 啟動...");
     
     const firebaseConfig = {
         apiKey: "AIzaSyDplIrzsJEHIpFTS7HdqeojHV38Le_vAgA",
@@ -82,18 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('errorIndicator').style.display = 'block';
             return;
         }
-
-        const localTestEvent = {
-            id: 'EV-TEST-01',
-            name: '【大師開講】京劇武行身段解析與排演應用',
-            date: '2026-05-20',
-            time: '14:00-16:30',
-            location: '梨園實驗劇場',
-            capacity: 50,
-            image: 'assets/event_lecture_test.png',
-            description: '邀請資深京劇大師親自示範，帶領新生代演員從基礎的手眼身法步，進階至實際舞臺調度上的應用轉換。課程將包含實地體驗與 QA 問答環節，名額有限，歡迎熱愛傳統戲曲的朋友踴躍報名！',
-            isActive: true
-        };
 
         // 監聽此活動的資料
         try {
@@ -309,9 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 郵件共用樣式變數
         const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#1f2937'; // 頁首深藍色
+        const primaryColor = '#8b5cf6'; // 主色調紫
         const successColor = '#10b981'; // 報名成功綠
-        const waitingColor = '#6366f1'; // 候補成功靛藍
+        const waitingColor = '#ec4899'; // 候補成功粉紅
         const accentColor = isWaiting ? waitingColor : successColor;
         
         const statusMsg = isWaiting 
@@ -319,12 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
             : '我們已確認您的報名資料，以下是您的詳細報名資訊：';
 
         return `
-        <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: ${mainFont};">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
                 <!-- Header -->
-                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">活動報名通知</p>
+                <div style="background: linear-gradient(135deg, #4f46e5, #ec4899); padding: 40px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">藝 境 空 間</h1>
+                    <p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.95; letter-spacing: 1px;">活動報名通知</p>
                 </div>
 
                 <!-- Main Body -->
