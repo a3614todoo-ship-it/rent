@@ -165,7 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
         db.collection('event_registrations')
             .where('eventId', '==', currentEvent.id)
             .onSnapshot((snapshot) => {
-                registrationsCount = snapshot.size;
+                let list = [];
+                snapshot.forEach(d => list.push(d.data()));
+                registrationsCount = list.filter(r => r.status !== 'cancelled').length;
                 const capacity = parseInt(currentEvent.capacity, 10) || 0;
                 
                 document.getElementById('eventCapacityDisplay').textContent = `${registrationsCount} / ${capacity}`;

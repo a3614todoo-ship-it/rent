@@ -2136,7 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">📅 ${e.date} ${e.time}</p>
                     <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px; flex:1;">📍 ${e.location}</p>
-                    <a href="events.html?id=${e.id}" class="btn-primary" style="text-align:center; padding:10px 0; border-radius:8px;">查看詳情與報名</a>
+                    <a href="https://a3614todoo-ship-it.github.io/events/details.html?id=${e.id}" class="btn-primary" style="text-align:center; padding:10px 0; border-radius:8px;">查看詳情與報名</a>
                 </div>
             </div>
             `;
