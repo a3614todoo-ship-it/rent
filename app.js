@@ -2370,17 +2370,36 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
         }
         
-        // 更新進度條
+        const ev = events.find(e => e.id === selectedId);
+        const capacity = parseInt(ev ? ev.capacity : 0, 10);
+        const validCount = list.filter(r => r.status === 'registered' || r.status === 'checked-in').length;
+        const availableSpots = Math.max(0, capacity - validCount);
+
+        // 更新進度條與統計
         const totalCount = list.length;
         const checkedInCount = list.filter(r => r.status === 'checked-in').length;
-        document.getElementById('checkinTotal').textContent = totalCount;
+        
+        // 此處 checkinTotal 改顯示活動總容量較合理
+        document.getElementById('checkinTotal').textContent = capacity || 0;
         document.getElementById('checkinCount').textContent = checkedInCount;
 
         const progressBar = document.getElementById('checkinProgressBar');
         if (progressBar) {
-            const percentage = totalCount > 0 ? (checkedInCount / totalCount) * 100 : 0;
+            const percentage = capacity > 0 ? (checkedInCount / capacity) * 100 : 0;
             progressBar.style.width = percentage + '%';
         }
+
+        // 動態注入釋出名額提示
+        let availMsg = document.getElementById('availableSpotsMsg');
+        if (!availMsg) {
+            availMsg = document.createElement('div');
+            availMsg.id = 'availableSpotsMsg';
+            availMsg.style.marginTop = '10px';
+            document.getElementById('checkinTotal').parentNode.appendChild(availMsg);
+        }
+        availMsg.innerHTML = availableSpots > 0 
+            ? `<span style="color:#f59e0b; font-weight:bold; font-size: 1rem;">🔥 釋出候補名額：${availableSpots} 人</span>` 
+            : '';
 
         // 搜尋功能
         const keyword = (checkinSearch ? checkinSearch.value.trim() : '').toLowerCase();
@@ -2396,20 +2415,47 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        list.sort((a,b) => (a.timestamp > b.timestamp ? 1 : -1));
+        list.sort((a,b) => {
+            if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
+            if (b.status === 'cancelled' && a.status !== 'cancelled') return -1;
+            return a.timestamp > b.timestamp ? 1 : -1;
+        });
 
+        let promoteCount = 0;
         tbody.innerHTML = list.map(r => {
-            const isChecked = r.status === 'checked-in';
-            const statusDisplay = isChecked 
-                ? '<span style="color:#10b981; font-weight:bold;">已報到</span>' 
-                : '<span style="color:var(--text-muted);">未報到</span>';
+            let statusDisplay = '';
+            let actionBtn = '';
             
-            const actionBtn = isChecked
-                ? `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="toggleCheckin('${r.id}', 'registered')">取消報到</button>`
-                : `<button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#10b981; color:white; border:none;" onclick="toggleCheckin('${r.id}', 'checked-in')">報到</button>`;
+            if (r.status === 'checked-in') {
+                statusDisplay = '<span style="color:#10b981; font-weight:bold;">已報到</span>';
+                actionBtn = `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="toggleCheckin('${r.id}', 'registered')">取消報到</button>`;
+            } else if (r.status === 'registered') {
+                statusDisplay = '<span style="color:var(--text-muted);">未報到</span>';
+                actionBtn = `
+                    <button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#10b981; color:white; border:none; margin-right:5px;" onclick="toggleCheckin('${r.id}', 'checked-in')">報到</button>
+                    <button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelEventRegistration('${r.id}')">取消參加</button>
+                `;
+            } else if (r.status === 'waiting') {
+                statusDisplay = '<span style="color:#f59e0b; font-weight:bold;">候補中</span>';
+                if (availableSpots > promoteCount) {
+                    promoteCount++;
+                    actionBtn = `
+                        <button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#3b82f6; color:white; border:none; margin-right:5px;" onclick="promoteWaitlist('${r.id}', '${selectedId}')">發送候補通知</button>
+                        <button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelEventRegistration('${r.id}')">取消參加</button>
+                    `;
+                } else {
+                    actionBtn = `
+                        <span style="color:var(--text-muted); font-size:0.85rem; margin-right:10px;">等待名額中</span>
+                        <button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelEventRegistration('${r.id}')">取消參加</button>
+                    `;
+                }
+            } else if (r.status === 'cancelled') {
+                statusDisplay = '<span style="color:#9ca3af;">已取消</span>';
+                actionBtn = `<span style="color:#9ca3af; font-size:0.85rem;">無操作</span>`;
+            }
 
             return `
-            <tr>
+            <tr ${r.status === 'cancelled' ? 'style="opacity: 0.5;"' : ''}>
                 <td style="color:var(--text-main); font-weight:bold;">${r.userName}</td>
                 <td>${r.userPhone}</td>
                 <td style="font-size:0.85rem; color:var(--text-muted);">${new Date(r.timestamp).toLocaleString('zh-TW')}</td>
@@ -2439,6 +2485,138 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!db) return;
         db.collection('event_registrations').doc(regId).update({ status: newStatus });
     };
+
+    window.cancelEventRegistration = function(regId) {
+        if(!db) return;
+        if(confirm("確定要將此報名者取消參加，並自動發送信件通知對方嗎？\n(資料不會刪除，僅標示為已取消並移至最下方)")) {
+            const userReg = eventRegistrations.find(r => r.id === regId);
+            const ev = events.find(e => e.id === userReg?.eventId);
+            db.collection('event_registrations').doc(regId).update({ status: 'cancelled' }).then(() => {
+                if (userReg && ev) {
+                    sendCancelEmail(userReg, ev);
+                    alert("✅ 已取消參加，系統已自動發送取消通知信！");
+                }
+            });
+        }
+    };
+
+    window.promoteWaitlist = function(regId, eventId) {
+        if(!db) return;
+        if(confirm("確定要手動將此人遞補為正式報名，並自動發送候補成功信件給對方嗎？")) {
+            const userReg = eventRegistrations.find(r => r.id === regId);
+            const ev = events.find(e => e.id === eventId);
+            if(userReg && ev) {
+                db.collection('event_registrations').doc(regId).update({ status: 'registered' }).then(() => {
+                    sendWaitlistSuccessEmail(userReg, ev);
+                    alert("✅ 已成功遞補，系統已自動發送通知信！");
+                }).catch(e => {
+                    console.error(e);
+                    alert("更新失敗：" + e.message);
+                });
+            }
+        }
+    };
+
+    function sendWaitlistSuccessEmail(regData, eventData) {
+        const SERVICE_ID = 'service_96agth6'; 
+        const TEMPLATE_ID = 'template_uz1rccd';
+        if (SERVICE_ID === 'YOUR_SERVICE_ID' || typeof emailjs === 'undefined') {
+            console.warn("EmailJS 未設定或套件未載入，跳過發信");
+            return;
+        }
+
+        const mainFont = 'system-ui, -apple-system, sans-serif';
+        const primaryColor = '#1f2937';
+        const successColor = '#10b981';
+        
+        const emailHtml = `
+        <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">候補成功通知</p>
+                </div>
+                <div style="padding: 40px; line-height: 1.6; color: #334155;">
+                    <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">好消息！您所候補的活動 <strong style="color: ${primaryColor};">${eventData.name}</strong> 已釋出名額，我們已為您轉為正式報名。</p>
+                    <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${successColor}; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 活動資訊</h3>
+                        <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                            <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">報名狀態</td><td style="padding: 8px 0; font-weight: bold; color: ${successColor};">正式報名成功</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">活動名稱</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.name}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">活動日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">活動時間</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.time}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">舉辦地點</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.location}</td></tr>
+                        </table>
+                    </div>
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background-color: #ffffff; margin-bottom: 30px;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #1e293b;">📍 報到須知</h4>
+                        <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">活動當天請憑「報名姓名」或「聯絡電話末三碼」向現場櫃檯人員報到即可。建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</p>
+                    </div>
+                    <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 15px 0 0 0; font-size: 18px; color: #1e293b;">期待在藝境空間見到您！</h4>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        const templateParams = {
+            to_email: regData.userEmail,
+            subject: `【候補成功通知】${eventData.name} - ${regData.userName}`,
+            message_html: emailHtml
+        };
+
+        emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams).catch(console.error);
+    }
+
+    function sendCancelEmail(regData, eventData) {
+        const SERVICE_ID = 'service_96agth6'; 
+        const TEMPLATE_ID = 'template_uz1rccd';
+        if (SERVICE_ID === 'YOUR_SERVICE_ID' || typeof emailjs === 'undefined') {
+            console.warn("EmailJS 未設定或套件未載入，跳過發信");
+            return;
+        }
+
+        const mainFont = 'system-ui, -apple-system, sans-serif';
+        const primaryColor = '#1f2937';
+        const cancelColor = '#ef4444';
+        
+        const emailHtml = `
+        <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">活動取消通知</p>
+                </div>
+                <div style="padding: 40px; line-height: 1.6; color: #334155;">
+                    <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">感謝您的通知！關於您原先報名的活動 <strong style="color: ${primaryColor};">${eventData.name}</strong>，我們已為您完成取消手續。</p>
+                    <p style="margin-bottom: 25px;">我們已將您的名額釋出給其他候補的朋友。非常感謝您的提前告知，讓其他有興趣的朋友也能有機會參與！若您未來對其他活動有興趣，隨時歡迎再次報名參加。</p>
+                    <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${cancelColor}; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 活動資訊參考</h3>
+                        <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                            <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">目前狀態</td><td style="padding: 8px 0; font-weight: bold; color: ${cancelColor};">已取消參加</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">活動名稱</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.name}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #64748b;">活動日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.date}</td></tr>
+                        </table>
+                    </div>
+                    <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 15px 0 0 0; font-size: 18px; color: #1e293b;">期待未來能在其他活動見到您！</h4>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        const templateParams = {
+            to_email: regData.userEmail,
+            subject: `【取消通知】${eventData.name} - ${regData.userName}`,
+            message_html: emailHtml
+        };
+
+        emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams).catch(console.error);
+    }
 
     // 匯出名冊
     const exportCheckinCsvBtn = document.getElementById('exportCheckinCsvBtn');

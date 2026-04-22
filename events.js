@@ -270,6 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             db.collection('event_registrations').add(registrationData)
                 .then((docRef) => {
+                    const titleEl = document.getElementById('successModalTitle');
+                    const descEl = document.getElementById('successModalDesc');
+                    if (isWaitlist) {
+                        titleEl.textContent = '候補登記成功！';
+                        descEl.innerHTML = '目前活動名額已滿，我們已為您登記候補。<br>若有名額釋出，系統將會發送候補成功通知信給您。';
+                    } else {
+                        titleEl.textContent = '報名成功！';
+                        descEl.innerHTML = '感謝您的參與，詳細資訊與報名序號已登錄。<br>活動時請憑報名時留存之姓名及聯繫方式現場核對報到。';
+                    }
                     document.getElementById('successModal').style.display = 'flex';
                     // 發送自動通知信
                     sendRegistrationEmail(registrationData);
@@ -277,7 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch((error) => {
                     // 如果 Firestore 存取被拒 (通常是未登入卻去寫入等安全規則，或是 db 根本連不上)
                     if (currentEvent.id === 'EV-TEST-01') {
-                         document.getElementById('successModal').style.display = 'flex';
+                        const titleEl = document.getElementById('successModalTitle');
+                        const descEl = document.getElementById('successModalDesc');
+                        if (isWaitlist) {
+                            titleEl.textContent = '候補登記成功！(測試)';
+                            descEl.innerHTML = '目前活動名額已滿，我們已為您登記候補。<br>若有名額釋出，系統將會發送候補成功通知信給您。';
+                        }
+                        document.getElementById('successModal').style.display = 'flex';
                     } else {
                         console.error("報名失敗: ", error);
                         alert(`報名失敗：${error.message}`);
@@ -285,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.textContent = '確認報名';
                     }
                 });
+        });
     }
 
     function generateEventEmailHTML(data) {
@@ -334,6 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #1e293b;">📍 報到須知</h4>
                         <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">
                             活動當天請憑「報名姓名」或「聯絡電話末三碼」向現場櫃檯人員報到即可。建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。
+                        </p>
+                    </div>
+                    
+                    <div style="background-color: #fffbeb; padding: 15px 20px; border-radius: 8px; border: 1px solid #fcd34d; margin-bottom: 30px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 15px; color: #b45309;">⚠️ 溫馨提醒</h4>
+                        <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.6;">
+                            為了讓更多喜愛藝文的朋友能參與活動，若您因故不克出席，請務必於活動開始 <strong>2 天前</strong> 聯繫我們。您的提前告知，將能讓候補的朋友順利遞補參與，感謝您的配合與體諒！
                         </p>
                     </div>
                     ` : ''}
