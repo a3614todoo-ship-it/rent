@@ -993,7 +993,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('startDate'),
             document.getElementById('endDate'),
             document.getElementById('scheduleDate'),
-            document.getElementById('inventoryDate')
+            document.getElementById('inventoryDate'),
+            document.getElementById('editEventDate')
         ].filter(Boolean);
 
         let currentActiveInput = null;
@@ -1605,11 +1606,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookingDate = item.startDate === item.endDate ? item.startDate : `${item.startDate} ~ ${item.endDate}`;
         const totalRent = item.totalRent || '無';
 
-        // 郵件共用樣式變數
-        const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#1f2937'; // 頁首深藍色
+        // 郵件共用樣式變數 (場地租借：黑金專業風)
+        const mainFont = 'system-ui, -apple-system, serif';
+        const primaryColor = '#1a1a1a'; // 頁首深灰黑
         const successColor = '#10b981'; // 通過綠色
-        const accentBlue = '#3b82f6';  // 資訊卡刻度藍
+        const accentColor = '#d4af37';  // 資訊卡刻度金
         const alertBg = '#fff1f2';    // 重要提醒背景
         const alertBorder = '#fecaca'; // 重要提醒邊框
         const alertText = '#991b1b';  // 重要提醒文字
@@ -1629,11 +1630,11 @@ document.addEventListener('DOMContentLoaded', () => {
             很抱歉告知您，您的預約申請因檔期衝突或其他行政因素，目前為「${statusLabel}」。</p>
             <p>該場次已重新釋出供其他單位申請。造成您的不便，敬請見諒。</p>
             
-            <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid #94a3b8; margin: 30px 0;">
+            <div style="background-color: #ffffff; padding: 25px; border-radius: 4px; border-left: 4px solid #94a3b8; margin: 30px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #334155;">📋 申請退回明細</h3>
                 <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
                     <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">申請案號</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingId}</td></tr>
-                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentBlue};">${venueName}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentColor};">${venueName}</td></tr>
                     <tr><td style="padding: 8px 0; color: #64748b;">租借日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingDate}</td></tr>
                     <tr><td style="padding: 8px 0; color: #64748b;">租借時段</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${slotStr}</td></tr>
                 </table>
@@ -1645,12 +1646,12 @@ document.addEventListener('DOMContentLoaded', () => {
             您的預約申請已經由管理員 ${statusLabel}。以下是您的預約明細：</p>
 
             <!-- 預約明細卡片 -->
-            <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${accentBlue}; margin-bottom: 30px;">
+            <div style="background-color: #ffffff; padding: 25px; border-radius: 4px; border-left: 4px solid ${accentColor}; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 預約明細</h3>
                 <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
                 <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
                     <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">申請案號</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b; letter-spacing: 1px;">${bookingId}</td></tr>
-                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentBlue};">${venueName}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">租借場地</td><td style="padding: 8px 0; font-weight: bold; color: ${accentColor};">${venueName}</td></tr>
                     <tr><td style="padding: 8px 0; color: #64748b;">租借日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${bookingDate}</td></tr>
                     <tr><td style="padding: 8px 0; color: #64748b;">租借時段</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${slotStr}</td></tr>
                     <tr><td style="padding: 8px 0; color: #64748b;">附加器材</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${equipStr}</td></tr>
@@ -1690,12 +1691,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return `
-        <div style="background-color: #f3f4f6; padding: 40px 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <div style="background-color: #fdfdfd; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
                 <!-- Header -->
-                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">${headerTitle}</p>
+                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; border-bottom: 3px solid ${accentColor};">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; color: ${accentColor}; text-shadow: 0px 1px 2px rgba(212,175,55,0.3);">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9; letter-spacing: 1px; color: ${accentColor};">${headerTitle}</p>
                 </div>
                 
                 <!-- Main Body -->
@@ -2526,15 +2527,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#1f2937';
+        const primaryColor = '#8b5cf6'; // 主色調紫
         const successColor = '#10b981';
         
         const emailHtml = `
-        <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: ${mainFont};">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">候補成功通知</p>
+        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
+                <div style="background: linear-gradient(135deg, #4f46e5, #ec4899); padding: 40px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">藝 境 空 間</h1>
+                    <p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.95; letter-spacing: 1px;">活動候補成功通知</p>
                 </div>
                 <div style="padding: 40px; line-height: 1.6; color: #334155;">
                     <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
@@ -2579,15 +2580,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#1f2937';
+        const primaryColor = '#8b5cf6'; // 主色調紫
         const cancelColor = '#ef4444';
         
         const emailHtml = `
-        <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: ${mainFont};">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <div style="background-color: ${primaryColor}; padding: 35px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold;">藝 境 空 間</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">活動取消通知</p>
+        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
+                <div style="background: linear-gradient(135deg, #4f46e5, #ec4899); padding: 40px 20px; text-align: center; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">藝 境 空 間</h1>
+                    <p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.95; letter-spacing: 1px;">活動取消通知</p>
                 </div>
                 <div style="padding: 40px; line-height: 1.6; color: #334155;">
                     <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
