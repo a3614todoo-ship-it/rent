@@ -1299,8 +1299,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setFrontendView() {
         // 顯示所有前台區塊
-        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('latest-events'), document.getElementById('pricing'), document.getElementById('contact-us')];
-        allFrontend.forEach(el => { if (el) el.style.display = (el === heroSection) ? 'flex' : 'block'; });
+        const frontendSections = ['home', 'venues', 'schedule', 'booking', 'latest-events', 'pricing', 'contact-us'];
+        frontendSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (id === 'home') {
+                    el.style.display = 'flex'; // Hero 區通常是 flex
+                } else {
+                    el.style.display = 'block';
+                }
+                el.classList.add('visible'); // 觸發 Scroll Reveal
+            }
+        });
         
         adminPanel.style.display = 'none';
 
@@ -2494,36 +2504,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#8b5cf6'; // 主色調紫
-        const successColor = '#10b981';
+        const primaryBg = '#fdfbf7';
+        const accentColor = '#d97706';
+        const textMain = '#4a3728';
 
         const emailHtml = `
-        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
-                <div style="background: linear-gradient(135deg, #4f46e5, #ec4899); padding: 40px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">藝 境 空 間</h1>
-                    <p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.95; letter-spacing: 1px;">活動候補成功通知</p>
+        <div style="background-color: #f5f1ea; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: ${primaryBg}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(74, 55, 40, 0.1); border: 1px solid #e5e0d8;">
+                <div style="background: #ffffff; padding: 45px 20px; text-align: center; border-bottom: 1px solid #f1ece4;">
+                    <h1 style="margin: 0; font-size: 26px; color: ${textMain}; letter-spacing: 6px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; color: ${accentColor}; letter-spacing: 2px; text-transform: uppercase;">Waitlist Success Notification</p>
                 </div>
-                <div style="padding: 40px; line-height: 1.6; color: #334155;">
-                    <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
-                    <p style="margin-bottom: 25px;">好消息！您所候補的活動 <strong style="color: ${primaryColor};">${eventData.name}</strong> 已釋出名額，我們已為您轉為正式報名。</p>
-                    <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${successColor}; margin-bottom: 30px;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 活動資訊</h3>
-                        <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                            <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">報名狀態</td><td style="padding: 8px 0; font-weight: bold; color: ${successColor};">正式報名成功</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">活動名稱</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.name}</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">活動日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.date}</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">活動時間</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.time}</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">舉辦地點</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.location}</td></tr>
+                <div style="padding: 40px; line-height: 1.8; color: ${textMain};">
+                    <p style="margin-bottom: 20px; font-size: 16px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">好消息！您所候補的活動 <strong style="color: ${accentColor};">${eventData.name}</strong> 已釋出名額，我們已為您轉為正式報名。</p>
+                    <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #eee; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: ${textMain}; border-bottom: 2px solid ${accentColor}; display: inline-block; padding-bottom: 5px;">📋 活動資訊</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
+                            <tr><td style="padding: 10px 0; color: #8d7a6b; width: 100px;">報名狀態</td><td style="padding: 10px 0; font-weight: bold; color: ${accentColor};">正式報名成功</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動名稱</td><td style="padding: 10px 0; font-weight: bold;">${eventData.name}</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">舉辦地點</td><td style="padding: 10px 0; font-weight: bold;">${eventData.location}</td></tr>
                         </table>
                     </div>
-                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background-color: #ffffff; margin-bottom: 30px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #1e293b;">📍 報到須知</h4>
-                        <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">活動當天請憑「報名姓名」或「聯絡電話末三碼」向現場櫃檯人員報到即可。建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</p>
+                    <div style="border: 1px solid #e5e0d8; border-radius: 12px; padding: 20px; background-color: #ffffff; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 15px; color: ${textMain};">📍 報到須知</h4>
+                        <p style="margin: 0; font-size: 14px; color: #6b5a4d;">活動當天請憑「報名姓名」或「聯絡電話末三碼」向現場櫃檯人員報到即可。建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</p>
                     </div>
-                    <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px; margin-top: 20px;">
-                        <h4 style="margin: 15px 0 0 0; font-size: 18px; color: #1e293b;">期待在藝境空間見到您！</h4>
+                    <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 0; font-size: 18px; color: ${textMain};">期待在藝境空間見到您！</h4>
+                        <p style="margin: 10px 0 0 0; font-size: 13px; color: #bcae9e;">管理團隊 敬上</p>
                     </div>
                 </div>
             </div>
@@ -2547,31 +2557,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const mainFont = 'system-ui, -apple-system, sans-serif';
-        const primaryColor = '#8b5cf6'; // 主色調紫
-        const cancelColor = '#ef4444';
+        const primaryBg = '#fdfbf7';
+        const accentColor = '#8d7a6b';
+        const textMain = '#4a3728';
 
         const emailHtml = `
-        <div style="background-color: #f8fafc; padding: 40px 20px; font-family: ${mainFont};">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);">
-                <div style="background: linear-gradient(135deg, #4f46e5, #ec4899); padding: 40px 20px; text-align: center; color: #ffffff;">
-                    <h1 style="margin: 0; font-size: 28px; letter-spacing: 4px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">藝 境 空 間</h1>
-                    <p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.95; letter-spacing: 1px;">活動取消通知</p>
+        <div style="background-color: #f5f1ea; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: ${primaryBg}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(74, 55, 40, 0.1); border: 1px solid #e5e0d8;">
+                <div style="background: #ffffff; padding: 45px 20px; text-align: center; border-bottom: 1px solid #f1ece4;">
+                    <h1 style="margin: 0; font-size: 26px; color: ${textMain}; letter-spacing: 6px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; color: ${accentColor}; letter-spacing: 2px; text-transform: uppercase;">Registration Cancellation</p>
                 </div>
-                <div style="padding: 40px; line-height: 1.6; color: #334155;">
-                    <p style="margin-bottom: 20px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
-                    <p style="margin-bottom: 25px;">感謝您的通知！關於您原先報名的活動 <strong style="color: ${primaryColor};">${eventData.name}</strong>，我們已為您完成取消手續。</p>
-                    <p style="margin-bottom: 25px;">我們已將您的名額釋出給其他候補的朋友。非常感謝您的提前告知，讓其他有興趣的朋友也能有機會參與！若您未來對其他活動有興趣，隨時歡迎再次報名參加。</p>
-                    <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; border-left: 5px solid ${cancelColor}; margin-bottom: 30px;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #1e293b;">📋 活動資訊參考</h3>
-                        <div style="height: 1px; background-color: #e2e8f0; margin-bottom: 15px;"></div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                            <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">目前狀態</td><td style="padding: 8px 0; font-weight: bold; color: ${cancelColor};">已取消參加</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">活動名稱</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.name}</td></tr>
-                            <tr><td style="padding: 8px 0; color: #64748b;">活動日期</td><td style="padding: 8px 0; font-weight: bold; color: #1e293b;">${eventData.date}</td></tr>
+                <div style="padding: 40px; line-height: 1.8; color: ${textMain};">
+                    <p style="margin-bottom: 20px; font-size: 16px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">您好，我們已收到您的取消申請，活動 <strong style="color: ${textMain};">${eventData.name}</strong> 的報名已正式取消。感謝您主動告知，讓名額能及時釋出給其他參與者。</p>
+                    <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #eee; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: ${textMain}; border-bottom: 2px solid ${accentColor}; display: inline-block; padding-bottom: 5px;">📋 活動資訊參考</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
+                            <tr><td style="padding: 10px 0; color: #8d7a6b; width: 100px;">目前狀態</td><td style="padding: 10px 0; font-weight: bold; color: ${accentColor};">已取消參加</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動名稱</td><td style="padding: 10px 0; font-weight: bold;">${eventData.name}</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${eventData.date}</td></tr>
                         </table>
                     </div>
-                    <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px; margin-top: 20px;">
-                        <h4 style="margin: 15px 0 0 0; font-size: 18px; color: #1e293b;">期待未來能在其他活動見到您！</h4>
+                    <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 0; font-size: 18px; color: ${textMain};">期待未來能在其他活動見到您！</h4>
+                        <p style="margin: 10px 0 0 0; font-size: 13px; color: #bcae9e;">管理團隊 敬上</p>
                     </div>
                 </div>
             </div>
