@@ -1167,8 +1167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     };
 
-    scheduleVenueSelect.addEventListener('change', window.renderSchedule);
-    scheduleDateInput.addEventListener('change', window.renderSchedule);
 
     // 執行初始化
     initCustomCalendar();
@@ -1192,24 +1190,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginModal = document.getElementById('loginModal');
     const closeModal = document.querySelector('.close-modal');
     const adminLoginSubmit = document.getElementById('adminLoginSubmit');
-
-    const heroSection = document.getElementById('home');
-    const venuesSection = document.getElementById('venues');
-    const bookingSection = document.getElementById('booking');
-    const scheduleSection = document.getElementById('schedule');
     const adminPanel = document.getElementById('adminPanel');
     const adminList = document.getElementById('adminList');
 
     let isAdminLoggedIn = false;
 
-    // 【修正】初始化時檢查是否已登入
+    // 定義切換函數 (確保在調用前定義)
+    function setAdminView() {
+        try {
+            const frontendIds = ['home', 'venues', 'schedule', 'booking', 'events-preview', 'pricing', 'contact'];
+            frontendIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            const ap = document.getElementById('adminPanel');
+            if (ap) ap.style.display = 'block';
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (adminSystemBtn) adminSystemBtn.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            if (typeof renderAdminList === 'function') renderAdminList();
+            window.location.hash = 'adminPanel';
+            window.scrollTo(0, 0);
+        } catch (e) { console.error(e); }
+    }
+
+    function setFrontendView() {
+        try {
+            const frontendSections = ['home', 'venues', 'schedule', 'booking', 'events-preview', 'pricing', 'contact'];
+            frontendSections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (id === 'home') ? 'flex' : 'block';
+            });
+            const ap = document.getElementById('adminPanel');
+            if (ap) ap.style.display = 'none';
+            if (isAdminLoggedIn) {
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (adminSystemBtn) adminSystemBtn.style.display = 'inline-block';
+                if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            } else {
+                if (loginBtn) loginBtn.style.display = 'inline-block';
+                if (adminSystemBtn) adminSystemBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        } catch (e) { console.error(e); }
+    }
+
     function checkAdminAuth() {
         if (localStorage.getItem('isAdmin') === 'true') {
             isAdminLoggedIn = true;
-            setFrontendView(); // 重新整理後，預設顯示前台，但保留管理按鈕
-        } else {
-            setFrontendView();
         }
+        setFrontendView();
     }
 
     loginBtn.addEventListener('click', () => {
@@ -1281,49 +1311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0, 0);
     });
 
-    function setAdminView() {
-        // 隱藏所有前台區塊
-        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('events-preview'), document.getElementById('pricing'), document.getElementById('contact')];
-        allFrontend.forEach(el => { if (el) el.style.display = 'none'; });
-        
-        adminPanel.style.display = 'block';
-        loginBtn.style.display = 'none';
-        if (adminSystemBtn) adminSystemBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
 
-        renderAdminList();
-        adminPanel.classList.add('visible');
-        window.location.hash = 'adminPanel';
-        window.scrollTo(0, 0);
-    }
-
-    function setFrontendView() {
-        // 顯示所有前台區塊
-        const frontendSections = ['home', 'venues', 'schedule', 'booking', 'events-preview', 'pricing', 'contact'];
-        frontendSections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                if (id === 'home') {
-                    el.style.display = 'flex'; // Hero 區通常是 flex
-                } else {
-                    el.style.display = 'block';
-                }
-                el.classList.add('visible');
-            }
-        });
-        
-        adminPanel.style.display = 'none';
-
-        if (isAdminLoggedIn) {
-            loginBtn.style.display = 'none';
-            if (adminSystemBtn) adminSystemBtn.style.display = 'inline-block';
-            logoutBtn.style.display = 'inline-block';
-        } else {
-            loginBtn.style.display = 'inline-block';
-            if (adminSystemBtn) adminSystemBtn.style.display = 'none';
-            logoutBtn.style.display = 'none';
-        }
-    }
 
     if (adminSystemBtn) {
         adminSystemBtn.addEventListener('click', (e) => {
