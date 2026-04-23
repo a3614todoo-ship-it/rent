@@ -1283,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setAdminView() {
         // 隱藏所有前台區塊
-        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('latest-events'), document.getElementById('pricing'), document.getElementById('contact-us')];
+        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('events-preview'), document.getElementById('pricing'), document.getElementById('contact')];
         allFrontend.forEach(el => { if (el) el.style.display = 'none'; });
         
         adminPanel.style.display = 'block';
@@ -1299,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setFrontendView() {
         // 顯示所有前台區塊
-        const frontendSections = ['home', 'venues', 'schedule', 'booking', 'latest-events', 'pricing', 'contact-us'];
+        const frontendSections = ['home', 'venues', 'schedule', 'booking', 'events-preview', 'pricing', 'contact'];
         frontendSections.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -1308,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     el.style.display = 'block';
                 }
-                el.classList.add('visible'); // 觸發 Scroll Reveal
+                el.classList.add('visible');
             }
         });
         
