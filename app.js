@@ -1196,10 +1196,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroSection = document.getElementById('home');
     const venuesSection = document.getElementById('venues');
     const bookingSection = document.getElementById('booking');
+    const scheduleSection = document.getElementById('schedule');
     const adminPanel = document.getElementById('adminPanel');
     const adminList = document.getElementById('adminList');
 
     let isAdminLoggedIn = false;
+
+    // 【修正】初始化時檢查是否已登入
+    function checkAdminAuth() {
+        if (localStorage.getItem('isAdmin') === 'true') {
+            isAdminLoggedIn = true;
+            setFrontendView(); // 重新整理後，預設顯示前台，但保留管理按鈕
+        } else {
+            setFrontendView();
+        }
+    }
 
     loginBtn.addEventListener('click', () => {
         loginModal.style.display = 'block';
@@ -1227,17 +1238,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // 方案二：遠端資料庫驗證
             const authDoc = await db.collection('admin_access').doc('auth').get();
             if (authDoc.exists) {
                 const authData = authDoc.data();
                 if (user === authData.username && pass === authData.password) {
                     isAdminLoggedIn = true;
+                    localStorage.setItem('isAdmin', 'true');
                     loginModal.style.display = 'none';
                     document.getElementById('adminUsername').value = '';
                     document.getElementById('adminPassword').value = '';
+                    
+                    // 【修正】登入成功後，留在原位但顯示「後台系統」按鈕
+                    setFrontendView();
+                    alert("✅ 管理員登入成功！");
+                    
+                    // 自動導航至後台面板
                     setAdminView();
-                    localStorage.setItem('isAdmin', 'true');
                 } else {
                     alert('帳號或密碼錯誤');
                 }
@@ -1250,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 支援按下 Enter 鍵進行登入
     document.getElementById('adminPassword').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             adminLoginSubmit.click();
@@ -1259,18 +1274,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     logoutBtn.addEventListener('click', () => {
         isAdminLoggedIn = false;
+        localStorage.removeItem('isAdmin');
         alert('已登出管理者帳號。');
         setFrontendView();
         window.location.hash = 'home';
+        window.scrollTo(0, 0);
     });
 
     function setAdminView() {
-        heroSection.style.display = 'none';
-        venuesSection.style.display = 'none';
-        if (scheduleSection) scheduleSection.style.display = 'none';
-        bookingSection.style.display = 'none';
+        // 隱藏所有前台區塊
+        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('latest-events'), document.getElementById('pricing'), document.getElementById('contact-us')];
+        allFrontend.forEach(el => { if (el) el.style.display = 'none'; });
+        
         adminPanel.style.display = 'block';
-
         loginBtn.style.display = 'none';
         if (adminSystemBtn) adminSystemBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-block';
@@ -1278,13 +1294,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminList();
         adminPanel.classList.add('visible');
         window.location.hash = 'adminPanel';
+        window.scrollTo(0, 0);
     }
 
     function setFrontendView() {
-        heroSection.style.display = 'flex';
-        venuesSection.style.display = 'block';
-        if (scheduleSection) scheduleSection.style.display = 'block';
-        bookingSection.style.display = 'block';
+        // 顯示所有前台區塊
+        const allFrontend = [heroSection, venuesSection, scheduleSection, bookingSection, document.getElementById('latest-events'), document.getElementById('pricing'), document.getElementById('contact-us')];
+        allFrontend.forEach(el => { if (el) el.style.display = (el === heroSection) ? 'flex' : 'block'; });
+        
         adminPanel.style.display = 'none';
 
         if (isAdminLoggedIn) {
@@ -1299,17 +1316,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (adminSystemBtn) {
-        adminSystemBtn.addEventListener('click', setAdminView);
+        adminSystemBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            setAdminView();
+        });
     }
 
-    // 攔截導覽列點擊，確保在有權限時可以直接回到前台
+    // 攔截導覽列點擊
     document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', () => {
+        link.addEventListener('click', (e) => {
             if (isAdminLoggedIn && adminPanel.style.display === 'block') {
-                setFrontendView();
+                const targetId = link.getAttribute('href').replace('#', '');
+                if (targetId && targetId !== 'adminPanel') {
+                    setFrontendView();
+                }
             }
         });
     });
+
+    // 執行登入檢查
+    checkAdminAuth();
 
     // 9.2 後台頁籤切換邏輯
     const adminTabs = document.querySelectorAll('.tab-btn');
